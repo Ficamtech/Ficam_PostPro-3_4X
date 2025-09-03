@@ -1,6 +1,7 @@
 [POST_VERSION] #DO NOT MOVE OR ALTER THIS LINE# V27.00 P0 E1 W27.00 T1722257585 M27.00 I0 O0
 scustpost_revision    : "25.2407" #:= Revision number for use by Resellers or customers.
 # ----------------------------------------
+# premier depot
 # - REALISE PAR                 --> FS
 # ---------------------------------------- config PP
 # - TYPE PP                     --> FRAISAGE
