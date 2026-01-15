@@ -501,7 +501,7 @@ s_reset_AB			: "M31 (REMISE A ZERO AXE A-B)"		# HURCO M31
 
 [STARTBIN]
 #property of FICAM, Eric Dauvilliers, e.dauvilliers@ficam.com, +33 (0)2 37 26 28 10
-scustpost_revision    : "25.3009" #:= Revision number for use by Resellers or customers.
+scustpost_revision    : "25.1710 #:= Revision number for use by Resellers or customers.
 
 #aide PPs
 #if prmcode$ = 20005, perc_prof = rpar(sparameter$, 1)  #affecte la valeur de la ligne NCI 20005 - colonne 1 A  la variable "perc_prof"
@@ -1436,7 +1436,7 @@ fstrsel  sg00 gcode$ sgcode 5 -1
 spl00   : "G17"
 spl01   : "G19"
 spl02   : "G18"
-spl03     : ""
+spl03   : ""
 splcode : ""
 
 fstrsel  spl00 plane$ splcode 4 -1
@@ -2435,6 +2435,10 @@ ptype_deg_Fin
 #region decallages_origines
 # Gestion des G54 A G59 et 505 A  599
 s_erreur_num_origine : "ATTENTION ERREUR de numéro d'origine Exemple 1=54 2=55 ..."
+fmt "G"    12 workofs_trans
+fmt "G"    12 old_workofs_trans
+workofs_trans : -999
+old_workofs_trans : -999
 p_ori_usi
 	# OPERATIONS TRANSFORMATIONS 
 		# MODE 1 "AUTO ORIGINES" PASSENT A 1
@@ -2448,12 +2452,23 @@ p_ori_usi
 	    n$, "workofs_", *workofs_, e$
 		n$, "workofs$", *workofs$, e$
 	    n$, "old_workofs", *old_workofs, e$
-		n$, "op_transformation :", *xform_op_id$, " ", *op_id$, "dec transf:", *workofs_dec, e$	
+		n$, "op_transformation :", *xform_op_id$, " ", *op_id$, "dec transf:", *workofs_dec, e$	 
+		n$, *workofs_trans, " ", *old_workofs_trans, e$
 		# xform_op_id$ & op_id$ même numéro = pas de transformation
 		]
     spaces$ = 1
     # OPERATIONS TRANSFORMEES 
-	if xform_op_id$ <> op_id$ & workofs$ <> old_workofs & workofs_dec > 0, workofs_ = workofs$	
+	if xform_op_id$ <> op_id$ & workofs$ <> old_workofs_trans, [	# & workofs_dec > 1
+		!workofs_trans, !workofs$, !old_workofs_trans 
+		workofs_trans = workofs$
+		if workofs$ <> prv_workofs$ | debut_out = 1, [
+			g_wcs = workofs_trans + 54
+			if g_wcs <= 54, n$, *g_wcs, e$
+	        if g_wcs > 59 & g_wcs < 151, g_wcs = g_wcs + 445, n$, *g_wcs, e$
+			]
+		old_workofs_trans = workofs_trans
+		]	
+
 	if workofs_ > 0 & workofs_ <> old_workofs, [
         g_wcs = workofs_ + 54
 		if g_wcs <= 54, n$, *g_wcs, e$
@@ -2461,7 +2476,13 @@ p_ori_usi
 		else, n$, *g_wcs, e$
 		old_workofs = workofs_
         ]
-    if workofs_ <= 0 & workofs_ <> old_workofs, g_wcs = 54, n$, *g_wcs, e$, old_workofs = workofs_
+
+	if workofs_ <= 0 & workofs_ <> old_workofs & old_workofs_trans < 0, [
+		g_wcs = 54
+		n$, *g_wcs, e$
+		old_workofs = workofs_
+		]
+	
 	if tox4$ <> 0 | toy4$ <> 0 | toz4$ <> 0, [
 		if tox4$ <> old_tox4 | toy4$ <> old_toy4 | toz4$ <> old_toz4, n$, s_com_open, "TRANS", *tox4$, *toy4$, *toz4$, s_com_close, e$	
 		old_tox4 = tox4$
@@ -3793,8 +3814,8 @@ ptlchg0$
 		param_surep
 		]
 	affiche_m0 = 1
-	comment$ 
-	if ss$ <> old_ssa, ssa = ss$, n$, ssa, spdlon, e$
+	comment$
+	pspindchng 
 	if op_id$ <> old_op_id, p_ori_usi
 	pfrvar
 	if ra_type$ = 1 & ra_block$ >0, [				# Renvoi d'ANGLE
@@ -3863,6 +3884,7 @@ pspindle        #Spindle speed calculations for RPM
 	
 pspindchng      #Spindle speed change
 	if prv_spdlsel <> spdlsel & old_ssa <> zero, p_bloc_O, n$, *sm01, e$
+	ssa = abs(ss$)	# en négatif suite op de transformation ?? --> positif
 	if old_ssa <> ssa | prv_spdlsel <> spdlsel, [
 		if ssa <> 0, [
 	 		n$, ssa, e$
@@ -3884,6 +3906,7 @@ ptlchg$      # Chang T<>prv_tool
 	increment_op_outil = 1 
 	affichage_cycle = 1 
 	old_workofs = -999
+	old_workofs_trans = -999
 	if palpeur = 1,	[
 	    n$, "M82 ; soufflage OFF", e$
 	    n$, "M71 ;Desactivation du palpeur", e$   
@@ -5640,17 +5663,17 @@ perreur_pas_fil  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE A  la fraise"
 	    [
 	    if pas_filetage = 9.999, [  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE A  la fraise"
 		    p_erreur_messages
-			"ERREUR NUM: 13", s_erreur_message_0, e$
+			#"ERREUR NUM: 13", s_erreur_message_0, e$
 		    result = mprint(s_erreur_pas_fil)
-		    exitpost$
+		    #exitpost$
 		    ]
 		if pas_filetage <> paramT7, [   # ""ATTENTION l'outil et l'opEration non pas le meme PAS !""
 		    p_erreur_messages
-			"ERREUR NUM: 14", s_erreur_message_0, e$
+			#"ERREUR NUM: 14", s_erreur_message_0, e$
 		    result = mprint(s_erreur_pas_fil2)
-		    exitpost$
+		    #exitpost$
 		    ]
-	    p_erreur_avance_fil 
+	    #p_erreur_avance_fil 
 	    ]
 
 perreur_num_outil  # "ATTENTION le numEro d'outil dEpasse les 60 !" 
@@ -5693,11 +5716,11 @@ p_erreur_dif_T_H_D # "ATTENTION num. d'outil est different du num -H- ou -D- !"
 	    #exitpost$
 		]
 
-p_erreur_avance_fil # "ATTENTION l'avance de filetage A  la fraise est TROP importante !"
+p_erreur_avance_fil # "ATTENTION l'avance de filetage A la fraise est TROP importante !"
 	if fr_pos$ > 500,
 	    [
 	    p_erreur_messages
-		"ATTENTION l'avance de filetage A  la fraise est TROP importante !", e$
+		"ATTENTION l'avance de filetage A la fraise est TROP importante !", e$
 	    "ERREUR NUM: 20", s_erreur_message_0, e$
 	    result = mprint(s_erreur_avance_fil)
 		result = mprint(s_erreur_message_0)

@@ -6,7 +6,7 @@
 # - NOMBRE d'AXES            	--> 4
 # - AXE                     	--> A ou B
 # - TYPE DE LANGAGE         	--> HEIDENHAIN
-#            VERSION            --> 530 ...
+#            VERSION            --> 530/630 ...
 # ---------------------------------------- client / infos machine
 # - CLIENT                    	--> 
 # - NON MACHINE                	-->  
@@ -187,6 +187,7 @@ Type_infos_outil	= 3		# 1 = NOM de l'outil "texte NOM" --> strtool$
 							# 2 = Infos géométrique réelle de l'outil
 							# 3 = NOM MC de l'outil et Infos géométrique réelle de l'outil
 							# 4 = NOM de l'outil "texte NOM" & Infos géométrique réelle de l'outil --> = 1 + 2
+							
 Position_info_outil = 1		# 1 = Affichage AVANT l'appel de l'outil
 							#		Nxx T2 M6
 							# 2 = Affichage APRES l'appel de l'outil
@@ -195,10 +196,19 @@ utilise_palette		= 0		# Affiche la gestion des palettes, codes M début et fin p
 							# 1 = Fonctions M uniquement sans dEgagements spécifiques
 							# 11 = Fonctions M ET dEgagements spécifiques
 
-Type_decalages		= 2		# Cycle de décallages/origine en OPERATIONS DE TRANSFORMATIONS
+Type_decalages		= 1		# Cycle de décallages/origine en OPERATIONS DE TRANSFORMATIONS
 							# 1 = CYCLE 247 UNIQUEMENT
-							# 2 = CYCLE 247 au DEPART et CYCLE DEF 7 sur les autre origines
-							
+							# 2 = CYCLE 247 au DEPART et CYCLE DEF 7 sur les autres origines
+
+Type_lissage        = 3		# Cycle 32 --> lissage
+							# 1 = uniquement au début du programme/valeurs par défaut 
+							# 2 = suivant l'OP / ne Force pas à l'appel d'outil
+								# valeurs par défaut
+								# valeurs modifiables avec mr7$, mr8$, mr9$
+							# 3 = Force à l'appel d'outil et suivant l'OP
+								# valeurs modifiables avec mr7$, mr8$, mr9$
+								# Valeurs des tolérances OPs
+				
 #prEparation de l'outil SUIVANT
 bldnxtool$          = 1     # 0 = n'affiche pas la préparation de l'outil suivant
                             # 1 = affiche				
@@ -219,7 +229,7 @@ lire_def_machine    = 1     # 1 = Lire les valeurs de la def machine / armoire -
                             # 0 = suivant les données du PP
 							
 Systeme_rot_plans	= 0 	# SystEme de gestion des différentes valeurs lors d'une rotation
-                                # 0  = pas de calculs --> origine gEnEralement au centre de la palette
+                                # 0  = pas de calculs --> origine gEnEralement **PAR FACE/G55/G56... ou **au centre de la palette
                                 # 1  = calculs AUTO "G68" --> origine oU on veut
                                 # 2X =	Calcul suivant une transition de l'origine CALCULé
 									# 21 = utilise le sous-programme O8000 pour calculer automatiquement les origines pour chaque face
@@ -294,7 +304,6 @@ tooltable$     	: yes$  		# creation de la liste d'outil en entete -
 								# Toujours ACTIVE pour lire d'autres infos depuis le PWRTT$
 								# Output tool table  0=no, 1=before header, 2=after header 
                     			# 3= Pre-read, call the pwrtt postblock
-
 #----------Blocs
 seqmax$        	: 99999
 omitseq$       	: no$  			# yes$ = pas de numerotation de blocs
@@ -416,7 +425,7 @@ s_rot_plus_court_OFF: "M127 ; Rotation au plus court OFF"
 
 [STARTBIN]
 #property of FICAM, Eric Dauvilliers, e.dauvilliers@ficam.com, +33 (0)2 37 26 28 10
-scustpost_revision    : "26.3009" #:= Revision number for use by Resellers or customers.
+scustpost_revision    : "26.3110" #:= Revision number for use by Resellers or customers.
 
 #aide PPs
 #if prmcode$ = 20005, perc_prof = rpar(sparameter$, 1)  #affecte la valeur de la ligne NCI 20005 - colonne 1 A  la variable "perc_prof"
@@ -430,7 +439,7 @@ diviseur    		: -1    	# diviseur tourne autour de X=1-->A autour de Y=2-->B // 
 
 # ZONE de FORMULES  si : uniquement au dédut si = constante
 no$            	= 0
-yes$ 			: 1
+yes$ 			= 1
 
 #cc_1013$    	: 1     # pour connaitre cc dans l'appel d'outil
 nobrk$         	: no$   # ne pas dEcomposer en xy puis z les mouvements en rapide
@@ -561,14 +570,14 @@ fmt "X" 	2  stck_x_max  #Maximum stock block position (X)
 fmt "Y" 	2  stck_y_max  #Maximum stock block position (Y)
 fmt "Z" 	2  stck_z_max  #Maximum stock block position (Z)
 
-fmt  "DIST"	2  bottomz      		#Bottom of stock
-fmt  "L"  	2  topz         		#Top of stock
+fmt  "L"	2  bottomz      		#Bottom of stock
+fmt  "DIST" 2  topz         		#Top of stock 					
 fmt  ""   	2  stck_ll_x    		#Stock lower left corner X value
 fmt  ""   	2  stck_ll_y    		#Stock lower left corner Y value
 fmt  ""   	2  stck_ur_x   			#Stock upper right corner X value
 fmt  ""   	2  stck_ur_y    		#Stock upper right corner Y value
 fmt  "R"  	2  stck_cyl_dia 		#Stock diameter for Cylindrical stock
-fmt  "R0"	2  stck_cyl_dia_inter 	#Stock diameter for Cylindrical stock
+fmt  "RI"	2  stck_cyl_dia_inter 	#Stock diameter for Cylindrical stock
 # --------------------------------------------------------------------------
 fmt  "X" 	2 xr$
 fmt  "Y" 	2 yr$
@@ -708,10 +717,14 @@ fmt  "Q239 = " 11 bq239
 fmt  "Q214 = " 	6 bq214
 fmt  "Q256 = " 	7 bq256
 fmt  "Q257 = " 	7 bq257
+fmt  "Q258 = " 	7 bq258
+fmt  "Q259 = " 	7 bq259
 fmt  "Q334 = " 	7 bq334
 fmt  "Q335 = " 	7 bq335
 fmt  "Q336 = " 	7 bq336
 fmt  "Q342 = " 	7 bq342
+fmt  "Q379 = " 	7 bq379
+fmt  "Q253 = " 	7 bq253
 
 fmt  "Q260 = " 	7 bq260  
 fmt  "Q261 = " 	7 bq261  
@@ -947,10 +960,17 @@ fmt 	 4 usecanCHIP
 fmt 	 4 perc_1er_perc_pour_C_ou_mm
 fmt 	 2 perc_Val_pour_Cent_mm
 fmt 	 2 perc_AVANCE_pour_Cent_mm
+fmt 	 2 Secu_haut_P_205 
+fmt 	 2 Secu_bas_P_205
+fmt 	 2 Pt_depart_P_205 
+fmt 	 2 Avance_pre_po_P_205
 fmt 	 2 P_er_perc_0
 fmt 	 2 P_er_perc_1
 fmt "Z"	 2 P_er_perc_2
 fmt 	 2 angle_foret
+fmt "T"	11	mr7$ 
+fmt "TA" 3	mr8$
+fmt 	 3	mr9$
 #endregion
 
 #region debug_tolerances
@@ -1029,6 +1049,9 @@ tlchg_time  	: 0  	# Tool Change Time (Minutes) OK VALEUR DANS LA CN
 
 old_sweep 		: 0 
 helice 			: 0
+mr7$ 			: -1
+mr8$			: -1
+mr9$			: -1
 
 #temps DLL
 fmt    			1 last_op_id_pwrtt 	# Derniere operation
@@ -1077,6 +1100,74 @@ ori_9 : 0
 old_cc 		: -1
 old_t 		: -9999
 
+# Variables, grande vitesse - CYCLE_32
+cycle_32_from_miscval 	: 0  	# mi9$ CYCLE_32 tolérance et valeur technologique de Misc Values ? 0=Non (valeurs calculées par Pst), 1=Oui
+									# 0 = Utiliser les valeurs par défaut pour les paramètres de tolérance et de technologie CYCLE832
+									# 1 = Utilisez les valeurs de tolérance et de technologie CYCLE832 définies dans les valeurs diverses (mi10$, mr9$ et mr10$)	
+cycle_32_tol          	: 0  	# 1er paramètre sur la ligne de sortie CYCLE832. Tolérance = "tolérance utilisée pour linéariser les splines lors de la génération du parcours d'outil"
+cycle_32_tech          	: 0  	# 2ème paramètre sur la ligne de sortie CYCLE832 Surface avancée. Technologie : 0=Désélection, 1=Finition, 2=Semi-finition, 3=Ebauche
+cycle_32_top_tech     	: 0  	# 2ème paramètre sur la ligne de sortie CYCLE832 Top Surface. Utilisé pour le sélecteur de chaîne et calculé à partir du cycle_32_tech  et du lissage
+cycle_32_active       	: 0  	# Indicateur pour indiquer l’état du CYCLE832. 0=off, 1=on (ou no$=off, oui$=on)
+deselect_cycle_32     	: 0  	# Indicateur pour indiquer que les commandes de désélection du cycle832 doivent être émises
+smoothing             	: 0  	# Lissage avec CYCLE832 Top Surface. 0=éteint, 1=activé
+sav_cycle_32_format   	: 0  	# Stocker le paramètre original cycle832_format
+old_cycle_32_tech		: 0
+lissage_3d_actif 		: 0 	# passe à 1 si on l'a activé une fois
+affiche_com_cycle_32	: -1
+
+#region TYPE de categories d'OPERATIONS
+#Définir les opérations à inclure dans les qualités de finition technique du CYCLE832 - Ebauche
+fmt	4	OP_Surface_ebauche
+fmt	4	OP_Surface_finition
+fmt	4	OP_percage
+
+hs_surf_style : 0    #High-speed Surface Toolpaths, Style
+OP_Surface_ebauche =				# 0 ou 1
+      (
+      tool_op$ = 5   |  # Multisurface rough parallel
+      tool_op$ = 6   |  # Multisurface rough radial
+      tool_op$ = 7   |  # Multisurface rough project
+      tool_op$ = 8   |  # Multisurface rough flowline
+      tool_op$ = 9   |  # Multisurface rough contour
+      tool_op$ = 10  |  # Multisurface rough pocket
+      tool_op$ = 44  |  # Multisurface rough plunge
+      tool_op$ = 107 |  # Multi-surface rough restmill
+      tool_op$ = 110 |  # Multi-surface 5axis, rough
+      tool_op$ = 131 |  # Multi-surface rough pocket, light
+      (tool_op$ = 132 & hs_surf_style = 0) |  # High-speed surface toolpaths - Roughing, Area Roughing
+      (tool_op$ = 132 & hs_surf_style = 1) |  # High-speed surface toolpaths - Roughing, Dynamic OptiRough
+      tool_op$ = 305 |  # Router surface rough pocket (obsolete)
+      tool_op$ = 446    # Advanced multiaxis—roughing
+      )
+
+#Définir les opérations à inclure dans les qualités de finition technique du CYCLE832 - Finition
+OP_Surface_finition =				# 0 ou 1
+      (
+      tool_op$ = 11  |  # Multisurface finish parallel
+      tool_op$ = 12  |  # Multisurface finish radial
+      tool_op$ = 13  |  # Multisurface finish project
+      tool_op$ = 14  |  # Multisurface finish flowline
+      tool_op$ = 15  |  # Multisurface finish contour
+      tool_op$ = 39  |  # Multisurface finish pencil trace
+      tool_op$ = 40  |  # Multisurface finish leftover stock
+      tool_op$ = 41  |  # Multisurface finish steep
+      tool_op$ = 42  |  # Multisurface finish shallow
+      tool_op$ = 43  |  # Multisurface finish constant scallop
+      tool_op$ = 45  |  # Multisurface finish 5-axis flowline
+      tool_op$ = 46  |  # Multisurface finish 4-axis
+      tool_op$ = 109 |  # Multi-surface finish blend
+      (tool_op$ = 132 & hs_surf_style = 2)  |  # High-speed surface toolpaths - Finishing, Waterline
+      (tool_op$ = 132 & hs_surf_style = 3)  |  # High-speed surface toolpaths - Finishing, Scallop
+      (tool_op$ = 132 & hs_surf_style = 4)  |  # High-speed surface toolpaths - Finishing, Horizonal Area
+      (tool_op$ = 132 & hs_surf_style = 5)  |  # High-speed surface toolpaths - Finishing, Raster
+      (tool_op$ = 132 & hs_surf_style = 6)  |  # High-speed surface toolpaths - Finishing, Pencil
+      (tool_op$ = 132 & hs_surf_style = 7)  |  # High-speed surface toolpaths - Finishing, Hybrid
+      (tool_op$ = 132 & hs_surf_style = 9)  |  # High-speed surface toolpaths - Finishing, Spiral
+      (tool_op$ = 132 & hs_surf_style = 10) |  # High-speed surface toolpaths - Finishing, Radial
+      (tool_op$ = 132 & hs_surf_style = 15) |  # High-speed surface toolpaths - Finishing, Project
+	  (tool_op$ = 132 & hs_surf_style = 16)    # High-speed surface toolpaths - Finishing, crête constante
+      )
+
 #Définir les opérations à inclure dans la catégorie Perçage
 OP_percage =				# 0 ou 1
       (
@@ -1087,6 +1178,8 @@ OP_percage =				# 0 ou 1
       tool_op$ = 136 |  # FBM drill control operation
       tool_op$ = 306    # Block drill
       )
+#endregion
+
 #endregion
 
 #region affectations_calculs
@@ -1422,7 +1515,7 @@ pnomgroupe  # Affichage du nom du groupe d'operation
 
 #region avances_variables
 #--------- avance variable -------------------
-fmt  "FQ" 3 frQ
+fmt  "FQ" 	3 	frQ
 fmt  "Q50=" 16  varq50  #AVANCE PLONGEE
 fmt  "Q51=" 7   varq51  #AVANCE TRAVAIL
 fmt  "oldQ" 16  old_q50
@@ -1461,8 +1554,10 @@ pfr
 	        ]
 	    if F_variables = 1 & tool_op$ = 102 & fr$ <> -1 & (mi4$ = 0), fr$ = 51, frQ = fr$, *frQ	# surfaçage
 	    if fr_pos$ >= 0 & (nextop$ = 11 | mi4$ <> 0), fr_pos$  					# pas de FRQ -- OP 5 AXES
-	    if F_variables = 0 & fr_pos$ <> -1, fr_pos$                				# pas de FRQ	  			
-	    debut_out = 0
+	    if F_variables = 0 & fr_pos$ <> -1, [									# pas de FRQ
+			if debut_out = 1, *fr_pos$, debut_out = 0  
+			else, fr_pos$                				
+			]
 		]   
     p_erreur_avanceS    
     # gestion de l'avance entre 2 passes en surfaçage prmcode = 10116 avec tool_op = 102
@@ -1676,7 +1771,7 @@ pprep$      # bloc init post pro en remplacement de la def armoire
     rd_md$                  		# lecture de la definition machine
 	rd_tlpathgrp$      				# Lecture des éléments dans "param_read$. outils- BRUT" 
     if write_ops = 0, erreur = 1   	# Write NC Operation information MUST be enabled in CD
-	arctype$ = 5
+	#arctype$ = 1
     !erreur
     !serreur
     if erreur <> 0, [
@@ -1725,7 +1820,7 @@ p_force_config_pp
     # The following three initializations are used for full arc and helix arc output when the CD
     # is set to output R or signed R for arcs
 	# 1 = CC(Centre du Cercle, valeurs en ABSOLU) ou 5 = CR(Rayon du Cercle)
-    arctype$     	= 1    #Arc center type XY plane 1=abs(IJ), 2=St-Ctr, 3=Ctr-St, 4=unsigned inc., 5=rayon, 6=rayon non signé
+    arctype$     	= 5    #Arc center type XY plane 1=abs(IJ), 2=St-Ctr, 3=Ctr-St, 4=unsigned inc., 5=rayon, 6=rayon non signé
     arctypexz$   	= 1    #Arc center type XZ plane 1=abs(IJ), 2=St-Ctr, 3=Ctr-St, 4=unsigned inc., 5=rayon, 6=rayon non signé
     arctypeyz$   	= 1    #Arc center type YZ plane 1=abs(IJ), 2=St-Ctr, 3=Ctr-St, 4=unsigned inc., 5=rayon, 6=rayon non signé
 
@@ -2429,9 +2524,14 @@ pparameter$
 	if prmcode$ = 12068, surep_Z_surf_2D  = rpar(sparameter$, 1) 
 	if prmcode$ = 15140, F_retract = rpar(sparameter$, 1)
     if prmcode$ = 12718, F_G1_ugv_2D   = rpar(sparameter$, 1)
-    if prmcode$ = 12194, pas_filetage = rpar(sparameter$, 1)    # "valeur du pas du filetage à la fraise"
+    if prmcode$ = 12194, pas_filetage = rpar(sparameter$, 1)    		# "valeur du pas du filetage à la fraise"
 	if prmcode$ = 12662, F_G1_ugv_3D   = rpar(sparameter$, 1)
-    if prmcode$ = 15163, Val_origine_Z = rpar(sparameter$, 1)   # "valeur de l'origine MC en Z"
+    if prmcode$ = 12593, tolerance_usinage_3D = rpar(sparameter$, 1)	# Tolérance TOTALE 3D 
+	if prmcode$ = 12553, tolerance_usinage_2D = rpar(sparameter$, 1) 	# Tolérance TOTALE 2D 
+	if prmcode$ = 12053, tolerance_usinage_REEL = rpar(sparameter$, 1) 	# Tolérance REEL USINAGE xx AVEC LE FILTRAGE
+	if prmcode$ = 15136, tolerance_usinage_max_pcent = rpar(sparameter$, 1)	# Tolérance REEL USINAGE xx AVEC LE FILTRAGE % MAX 
+	if prmcode$ = 12628, hs_surf_style = rpar(sparameter$, 1)  	# type d'usinage de surface UGV 
+	if prmcode$ = 15163, Val_origine_Z = rpar(sparameter$, 1)   # "valeur de l'origine MC en Z"
     if prmcode$ = 15164, Val_origine_Y = rpar(sparameter$, 1)   # "valeur de l'origine MC en Y"
     if prmcode$ = 15165, Val_origine_X = rpar(sparameter$, 1)   # "valeur de l'origine MC en X"
 	if prmcode$ = 15166, workofs_ = rpar(sparameter$, 1)    	# 15166=Val origine de base 
@@ -2453,7 +2553,10 @@ pparameter$
 	if prmcode$ = 15074, perc_1er_perc_pour_C_ou_mm = rpar(sparameter$, 1)	# CHOIX DU MODE - Valeur de la 1ère plongée en % ou MM (& décomposé) 
 	if prmcode$ = 15075, perc_Val_pour_Cent_mm = rpar(sparameter$, 1)		# VALEUR de la 1ère plongée en % ou MM (& décomposé) 	
 	if prmcode$ = 15076, perc_AVANCE_pour_Cent_mm = rpar(sparameter$, 1)	# VALEUR de la 1ère plongée en % ou MM (& décomposé) 
-	
+	if prmcode$ = 15077, Secu_haut_P_205 = rpar(sparameter$, 1)	# 
+    if prmcode$ = 15078, Secu_bas_P_205 = rpar(sparameter$, 1)	# 
+	if prmcode$ = 15079, Pt_depart_P_205 = rpar(sparameter$, 1)	#
+	if prmcode$ = 15080, Avance_pre_po_P_205 = rpar(sparameter$, 1)	#  	
 	if opcode$ <> 19, result = fprm (1)                         # Surep. pour le surfacage
     if opcode$ = 19, result = fprm (2)                          # Surep. pour 2D 3D
 	
@@ -2497,7 +2600,7 @@ psub_st_s$    # entete sous prog en Z
 
 psub_end_s$    # fin sous prog en Z
     n$, "LBL 0", e$
-    n$, ";", e$
+    *n$, e$
 	
 #-------------------------BLOCS DE TRAITEMENT DES SOUS PROG EN TRANSFORMER ---------------------------
 ptranslation    # pour usinage transformer en translation
@@ -2697,7 +2800,7 @@ p_ori_usi
 		n$, "workofs$", *workofs$, e$
 	    n$, "old_workofs", *old_workofs, e$ 
 		n$, "op_transformation :", *xform_op_id$, " ", *op_id$, "dec transf:", *workofs_dec, e$
-		n$, "mi1_prmcode, old_mi1 :", *mi1_prmcode, *old_mi1, e$
+		n$, "mi1_prmcode, old_mi1 :", *mi1_prmcode, " ", *old_mi1, e$
 		# xform_op_id$ & op_id$ même numéro = pas de transformation 
 		]
     s_INFO_tab_pt_0 = "ATTENTION ! utilisation du TABLEAU PT ZERO, à activer sur la CN -.D ! OP. MC: " + s_old_spost_arg_2 + " AVEC L'OUTIL " + no2str(t$)
@@ -2720,13 +2823,15 @@ p_ori_usi
 	if xform_op_id$ <> op_id$ & workofs$ <> old_workofs & workofs_dec > 0, [	
 		workofs_ = workofs$
 		if Type_decalages = 1 | debut = 2, 	[	# 1er en 247
+			if workofs_ = 0, workofs_ = 1						#+ Pb 1ère op transformée coord avec op. fantome = dec à 0
 			n$, "CYCL DEF 247 INIT. PT DE REF.~", e$
 	    	"  Q339=", *workofs_, "; NUMERO DE PT DE REF.", e$
 			]
-		if Type_decalages = 2 & debut <> 2, [
+		#if Type_decalages = 2 & debut <> 2, [
+		if Type_decalages = 2 & debut <> 2 & workofs$ <> 0, [	# Pb 1ère op transformée coord avec op. fantome = dec à 0
 			n$, "; SUIVANT TABLEAU POINT ZERO", e$
             n$, "CYCL DEF 7.0 POINT ZERO", e$
-            n$, "CYCL DEF 7.1", 35, *workofs_, e$
+            n$, "CYCL DEF 7.1xx", 35, *workofs_, e$
 			]
 		old_workofs = workofs$ 
 		]
@@ -2893,11 +2998,13 @@ p_block_form
             stck_cyl_dia = stck_ht$      #Define stock diameter
             ]
           # Output WORKPIECE line using values determined above / Define the stock for graphics - Cylinder
+		  if topz = 0, result = mprint(s_erreur_L_brut_cylindrique)
 		  stck_cyl_dia = stck_cyl_dia / 2 # Ici valeur au rayon
 		  if stock_cyl_axis = 0, s_axe_brut_cyl = "X"
 		  if stock_cyl_axis = 1, s_axe_brut_cyl = "Y" 
 		  if stock_cyl_axis = 2, s_axe_brut_cyl = "Z" 
-          n$, "BLK FORM CYLINDER", *s_axe_brut_cyl, *stck_cyl_dia, *topz, *bottomz, *stck_cyl_dia_inter, e$ # Z R50 L105 DIST+5 R110 = AXE DE BROCHE, RAYON, LONGUEUR, "DIST", RAYON INTER
+		  bottomz = abs(bottomz)
+          n$, "BLK FORM CYLINDER", *s_axe_brut_cyl, *stck_cyl_dia, *bottomz, *topz, *stck_cyl_dia_inter, e$ # Z R50 L105 DIST+5 R110 = AXE DE BROCHE, RAYON, LONGUEUR, "DIST", RAYON INTER
           ]
         ]
 	if block_form & stock_shape = two, n$, "; Brut solide-Maillage utilisé dans MasterCam", e$		# Solide-Maillage
@@ -3389,16 +3496,133 @@ p_rotation_tlchg0_nul_continu   	# affichage de l'angle au chg outil nul pour co
 #region corps_Pheader_a_Peof
 
 #region Pbloc_appelEs
-
+p_aff_infos_cycle_32
+	"OP_Surface_ebauche", *OP_Surface_ebauche, e$
+	"OP_Surface_finition", *OP_Surface_finition, e$
+	"cycle_32_tech ", *cycle_32_tech, e$
+	"tool_op$ ", *tool_op$, e$
+	"hs_surf_style ", *hs_surf_style, e$
+	"cycle_32_format ", *cycle_32_format, e$ 
+	"tolerance_usinage_3D ", *tolerance_usinage_3D, e$
+	"tolerance_usinage_2D ", *tolerance_usinage_2D, e$
+	"tolerance_usinage_REEL ", *tolerance_usinage_REEL, e$
+	"tolerance_usinage_MAX_%", *tolerance_usinage_max_pcent, e$
+	"OLD_tolerance_usinage ", *OLD_tolerance_usinage, e$
+	"OP_percage ", *OP_percage, e$
+	#"p_affiche_options", *posi_options, e$
+	"cycle_32_from_miscval ", *cycle_32_from_miscval, e$
+	*old_mr7, *old_mr8, *old_mr9, e$ # *prv_mr10$, e$
+	#*mi9$, *mr7$, *mr8$, *mr9$, *mr10$, e$
+	 
+fmt      3 lissage
+fmt     11 tolerance_usinage_3D
+fmt     11 OLD_tolerance_usinage_3D
+fmt     11 tolerance_usinage_2D
+fmt     11 OLD_tolerance_usinage_2D
+fmt     11 tolerance_usinage_5x
+fmt     11 tolerance_usinage_REEL 
+fmt     11 tolerance_usinage_max_pcent 
+fmt     11 OLD_tolerance_usinage
+fmt      3 Type_lissage
+fmt 	 3 old_Type_lissage
+fmt 	 3 force_Type_lissage
+fmt     11 tol_tab_Cycle_32
+fmt     11 tol_tab_Cycle_32_aff
+fmt ""   3 cycle_32_format
+fmt "T"	 11 mr7
+fmt "TA"  3 mr8
+fmt ""    3 mr9
+old_mr7		: 0
+old_mr8		: 0
+old_mr9		: 0
 #---------------------------------
 P_f_val_origine_depart_idem 
     Old_Val_origine_Z = Val_origine_Z
     Old_Val_origine_Y = Val_origine_Y
     Old_Val_origine_X = Val_origine_X
     Sold_snom_RUD = snom_RUD
+	
+p_lissage    # activation du lissage machine
+	if Mode_reglage_PP = 0, p_aff_infos_cycle_32
+	
+	!Type_lissage,!OP_Surface_ebauche,!OP_Surface_finition,!hs_surf_style
+	!cycle_32_format,!tolerance_usinage_3D,!tolerance_usinage_max_pcent,!OLD_tolerance_usinage,!OP_percage
+		
+	if mr7$ <> old_mr7 | mr8$ <> old_mr8 | mr9$ <> old_mr9, force_Type_lissage = 1	# intro données manuellement
+		#(mr7$ <> 0 & mr8$ <> 0), force_Type_lissage = 1	# intro données manuellement
+	mr7 = mr7$, mr8 = mr8$, mr9 = mr9$
+	if mr7$ = 0.1 & mr8$ = 3 & mr9$ = 0, force_Type_lissage = 0 	#SUIVANT les VALEURS de BASE
+		
+	# 1 = uniquement au début du programme/valeurs par défaut 
+	if Type_lissage = 1, [
+		if mr7$ = 0, mr7 = 0.1
+		if mr8$ = 0, mr8 = 3
+		if mr9$ > 1, mr9 = 0, else, mr9 = mr9$ 
+		p_affiche_lissage
+		]
+	
+	# 2 = suivant l'OP / ne Force pas à l'appel d'outil
+		# valeurs par défaut
+		# valeurs modifiables avec mr7$, mr8$, mr9$
+	if Type_lissage = 2 & OP_percage = 0, [  
+		if force_Type_lissage = 1 | old_Type_lissage <> 1, [
+			p_affiche_lissage
+			old_Type_lissage = 1
+			force_Type_lissage = 0
+			]
+		]
+		
+	# 3 = Force à l'appel d'outil et suivant l'OP
+		# valeurs modifiables avec mr7$, mr8$, mr9$
+		# Valeurs des tolérances OPs
+	if Type_lissage = 3 & OP_percage = 0, [  					
+		if force_Type_lissage = 1 & old_Type_lissage <> 1, [	 
+			p_affiche_lissage									
+			old_Type_lissage = 1		
+			]
+		if force_Type_lissage = 0, 
+			[	# OPs 3D
+            if (OP_Surface_ebauche = 1 | OP_Surface_finition = 1) & (tolerance_usinage_3D <> OLD_tolerance_usinage_3D), [
+				if tolerance_usinage_3D <> OLD_tolerance_usinage_3D, [
+					n$, s_com_open, "Lissage OP 3D", s_com_close, e$
+					if tolerance_usinage_max_pcent > tolerance_usinage_3D, tolerance_usinage_3D = tolerance_usinage_max_pcent
+					if tolerance_usinage_3D <= 0.025, n$, s_com_open, "FINITION", s_com_close, e$, mr9 = 0
+		            if tolerance_usinage_3D > 0.025 & tolerance_usinage_3D < 0.05, n$, s_com_open, "SEMI-FINITION", s_com_close, e$, mr9 = 0
+		            if tolerance_usinage_3D >= 0.05, n$, s_com_open, "EBAUCHE", s_com_close, e$, mr9 = 1
+					mr7 = tolerance_usinage_3D
+					OLD_tolerance_usinage_3D = tolerance_usinage_3D
+					]
+				]
+        	if (OP_Surface_ebauche <> 1 & OP_Surface_finition <> 1) 	# OPs 2D
+				& ((tolerance_usinage_REEL <> OLD_tolerance_usinage_2D) | (tolerance_usinage_2D <> OLD_tolerance_usinage_2D)), [	
+	            if tolerance_usinage_REEL > 0, tolerance_usinage_2D = tolerance_usinage_REEL # Si filtrage alors tol 2D = val de filtrage dans l'OP MC
+				if tolerance_usinage_2D <> OLD_tolerance_usinage_2D, [
+					n$, s_com_open, "Lissage OP 2D", s_com_close, e$
+					if tolerance_usinage_2D <= 0.025, n$, s_com_open, "FINITION", s_com_close, e$, mr9 = 0
+					if tolerance_usinage_2D > 0.025, n$, s_com_open, "SEMI-FINITION", s_com_close, e$, mr9 = 0
+					if surep_XY_2D > 0, mr9 = 1	# Ebauche
+					mr7 = tolerance_usinage_2D
+					OLD_tolerance_usinage_2D = tolerance_usinage_2D	
+					]								
+            	]    	
+			mr8 = mr8$ 
+			if mr7 <> old_mr7 | mr9 <> old_mr9, p_affiche_lissage
+			force_Type_lissage = 0
+			]
+        lissage = 1
+		]
+		
+p_affiche_lissage
+	#*n$, e$
+    n$, "CYCL DEF 32.0 TOLERANCE", e$
+    n$, "CYCL DEF 32.1", *mr7, e$
+    n$, "CYCL DEF 32.2 HSC-MODE:", no_spc$, *mr9, *mr8, e$
+	old_mr7	= mr7
+	old_mr8	= mr8 
+	old_mr9	= mr9 
 
 p_rot_perc_profond  # ROT BROCHE POUR PERCAGE PROFOND	
-	if posi_p_prof = 1, 	# hors matière
+	if posi_p_prof = 1, 			# hors matière
 		[
 		ssa = ssa * 0.1
 		if ssa > 500, ssa = 500
@@ -3563,14 +3787,14 @@ pheader$
         ]
     spaces$ = 1
     if Liste_outils, [
-		n$, ";", e$
+		*n$, e$
     	n$, "; *LISTE D OUTILS*", e$
 		]
     if outils_param = 1, [
         n$, "; MODIFIER LES NUMEROS D OUTILS", e$
         n$, "; UNIQUEMENT DANS LA LISTE D OUTILS APRES LE =", e$
         n$, "; NE PAS MODIFIER DANS LES -TOOL CALL- DU PROGRAMME", e$
-        n$, ";", e$
+        *n$, e$
         if appel_param_outils = 1, n$, "LBL 999", e$
         ]
     entete_ = 0 
@@ -3680,7 +3904,7 @@ p_affiche_outil
 		n$, s_com_open, "OUTIL NUMERO : ", *t$, s_com_close, e$
 		]	
 	if program_stop = 11, pcan1, "/", n$, sm00, e$
-    if program_stop = 22, pcan1, "/", n$, sm01, e$
+    if program_stop = 22, pcan1, n$, sm01, e$ #"/", 
 	if ra_type$ = 1 & ra_block$ >0, [	# 1 =renvoie d'angle actif et NUM choix du multibroche
 		lg_port_out_outil_block = paramT49 + paramT22
 		n$, "Q599 =", *lg_port_out_outil_block,  s_com_open, "LONGUEUR TOTALE DU PORTE OUTIL ET OUTIL :RENVOI D ANGLE ", s_com_close, e$
@@ -3859,9 +4083,9 @@ psof$			# DEBUT DE PROGRAMME T<>0
 	if affiche_ori_entete = 11 & compteur_workofs > 1, mergesub$	# ICI les origines utilisés par MC (depuis pwrtt$)
 	if affiche_ori_entete = 1 | affiche_ori_entete = 11, clearsub$	# Sup. des origines dans la mémoire
 	spaces$ = 1
-    n$, ";", e$
+    *n$, e$
     if block_form, p_block_form
-    n$, ";", e$
+    *n$, e$
 	# ICI descripteur si actif dans la machine et config PP
 	comment$ 
 	debut = 2	#pour le 1er cycle 247
@@ -3877,11 +4101,8 @@ psof$			# DEBUT DE PROGRAMME T<>0
 	p_palette_debut	# PALETTES
 	p_ori_usi
 	debut = 0
-	n$, ";", e$
-    n$, "CYCL DEF 32.0 TOLERANCE", e$
-    n$, "CYCL DEF 32.1 T0.02", e$
-    n$, "CYCL DEF 32.2 HSC-MODE:0 TA0.02", e$
-    n$, ";", e$
+	if Type_lissage = 3, old_Type_lissage = -1	# force l'affichage à l'appel d'outil
+	if Type_lissage = 1, p_lissage 
 	p_degage_debut
 	comment$ 
     gcode$ = 0
@@ -3902,13 +4123,14 @@ psof$			# DEBUT DE PROGRAMME T<>0
     spaces$=0
     p_Z_mini_maxi_OP
     spaces$ = 1
-    n$, ";", e$  
+    *n$, e$  
 	param_comp                        			
     param_surep
 	#old_mi1 = -2	# force l'affichage du cycle 247 au 1ER outil
     old_workofs = -1
 	p_ori_usi 
     pfrvar
+	if Type_lissage > 1, p_lissage 
 	if tool_op$ = 114, cant_no$ = 0 #tool_op$ 114 = perCage AVANCE #pour ne pas afficher un arrosage erroné au debut
 	pcan # arrosages vx et textes
     p_placement_apres_chang_outil
@@ -3999,7 +4221,7 @@ ptlchg0$
 	drill_4_axes = 0 
     if Mode_reglage_PP = 0, "syncax", *syncaxis$, "old_syn", *old_syncaxis, "nbr_combi", *nbr_combi, "erreur", *erreur, "compt_axes_rot", *compt_axes_rot, e$
 	pcan # arrosages vx et textes
-	if Test_bris_outils = 1, [
+	if Test_bris_outils = 2 & op_id$ <> old_op_id, [
 		pcool_off 
 		n$, *sm_01, e$
 		p_test_bris_outil
@@ -4031,6 +4253,7 @@ ptlchg0$
     #if coolant$ <> old_lubrif & drlcst7 = 0, n$, p_lubrif_ON, e$ #PAS AVEC PERCAGE TRES PROFOND
 	if old_lubrif <> -1 & op_id$ <> old_op_id, n$, p_lubrif_ON, e$
     pfrvar
+	if Type_lissage > 1, p_lissage
 	if ra_type$ = 1 & ra_block$ >0, [				# Renvoi d'ANGLE
 		Angle_PLAN_MC_renvoie_angle = atan2(-m8$,-m7$)
 		if Angle_PLAN_MC_renvoie_angle <> old_Angle_PLAN_MC_renvoie_angle, [
@@ -4099,6 +4322,7 @@ pspindle        #Spindle speed calculations for RPM
 	
 pspindchng      #Spindle speed change
 	if prv_spdir2 <> spdir2 & old_ssa <> zero, p_bloc_O, n$, *sm_01, e$
+	ssa = abs(ss$)	# en négatif suite op de transformation ?? --> positif
 	if old_ssa <> ssa | prv_spdir2 <> spdir2, [
 		if ssa <> 0, [
 			n$, "; POUR AUTRE ROTATION DE BROCHE", e$
@@ -4188,7 +4412,7 @@ ptlchg$
     p_Z_mini_maxi_OP
     spaces$ = 1
 	pcan # arrosages vx et textes
-    n$, ";", e$
+    *n$, e$
     perreur_pas_fil  
     perreur_num_outil   
     p_erreur_dif_T_H_D 
@@ -4200,6 +4424,8 @@ ptlchg$
 	if opcode$ = 16, drill_4_axes = 1
     debut_out = 1    
     pfrvar
+	if Type_lissage = 3, old_Type_lissage = -1	# force l'affichage à l'appel d'outil
+	if Type_lissage > 1, p_lissage
 	if tool_op$ = 114, cant_no$ = 0 #pour ne pas afficher un arrosage erroné au debut
 	pcan
 	p_placement_apres_chang_outil
@@ -4252,6 +4478,7 @@ peof$
 	#zabs = z$, gcode$ =0, n$, *sgcode, *zabs, e$
     #if tool_op$ <> 114, p_lubrif_OFF
 	p_lubrif_OFF
+	n$, *sm_01, e$
 	if sauve_ra_block_ >0, [				# Annulation du décallage FIN du renvoi d'angle  
 		n$, "CYCL DEF 7.0 POINT ZERO", e$
         n$, "CYCL DEF 7.1 0", e$
@@ -4259,7 +4486,8 @@ peof$
         n$, "CYCL DEF 7.3 0", e$
 		sauve_ra_block_ = -1 	
 		]	
-	if Test_bris_outils = 1, p_test_bris_outil
+	!mi6$, !mi5$, e$
+	if mi6$ = 1, p_test_bris_outil
 	p_ori_usi_annul
 	p_degage_fin
 	if bldnxtool$ = 1 & type_prep_outil = 2,	[	
@@ -4303,8 +4531,8 @@ peof$
 		n$, s_com_open, "TEMPS TOTAL CORRIGE ", *Heure, *min, *sec, s_com_close, e$
 		]  
 	# 
-    n$, "M2", e$
-    n$, ";", e$
+    n$, "M30", e$
+    *n$, e$
 	n$, "LBL 99 ; ANNULATION", e$
     n$, "CYCL DEF 7.0 POINT ZERO", e$
     n$, "CYCL DEF 7.1 X0", e$
@@ -4366,6 +4594,7 @@ sbris_outil2 : "CALL PGM TNC:\dmg\BRIS-FRAISE.H"    	# macro appel de sous progr
 p_test_bris_outil                    # controle bris outil
 	type_test_bris_outils = mi5$
 	Test_bris_outils = mi6$ 
+	n$, "L", *degageZ, smode_deg, e$ 
     if type_test_bris_outils <> 0, 	[
 		if type_test_bris_outils = 1,	[
 			n$, ";TEST BRIS OUTIL FORET", e$ 
@@ -4454,7 +4683,7 @@ pcir0$   # verif des arcs --> conversion en lignes si besoin
 pcir$      # Circulaire
 	#"ICI : pcir$ ", e$
     perreurCC_COR   # "ATTENTION PRISE DE CORRECTION OU ANNULATION SUR UN CERCLE"
-    if plane$ = 0,[
+    if plane$ = 0,[		#G17
         @z$
         if arctype$ = 1, n$, s_CC, i$, j$, e$																# ABSOLU
 		if arctype$ = 5 & z$ <> prvz, n$, `s_CC, *xc$, *yc$, e$												# RAYON
@@ -4474,15 +4703,15 @@ pcir$      # Circulaire
         if arctype$ = 1 & z$ <> prvz & z$ = nextz$ & (nextop$ = 2 | nextop$ = 3), n$, "L" , pxyz, strcantext, e$ #"; EN +", e$	
         !i$, !x$,!y$
         ]
-    if plane$ = 1,[
-        if arctypexz$ = 1, [
+    if plane$ = 1,[		#G19
+        if arctypexz$ = 1, [ 
 			n$, s_CC, j$, k$, e$
         	n$, "C", pxyz, sgcode, pcord, pfr, strcantext, [if ra_block$ >0, rayon = arcrad$, s_com_open, *rayon, s_com_close ], e$	# en CENTRE ABSOLU
 			]
 		if arctypexz$ = 5, n$, s_CR, *x$, y$, *z$, arcrad$, sgcode, pcord, pfr, strcantext, e$	 
         !i$, !z$,!y$
         ]
-    if plane$ = 2,[
+    if plane$ = 2,[		#G18
         if arctypeyz$ = 1, [
 			n$, s_CC, i$, k$, e$
         	n$, "C", pxyz, sgcode, pcord, pfr, strcantext, [if ra_block$ >0, rayon = arcrad$, s_com_open, *rayon, s_com_close ], e$	# en CENTRE ABSOLU
@@ -4808,16 +5037,17 @@ pchpbrk$    # Cycle de brise copeaux
     "    ", bq204, "  ; SAUT DE BRIDE~", e$
     "    ", bq212, "  ; VALEUR DE REDUCTION~", e$
     "    ", bq213, "  ; NB BRISE-COPEAUX~", e$
+	"    ", bq205, "  ; PROF. PASSE MINI~", e$
     "    ", bq211, "  ; TEMPO. AU FOND~", e$
-    "     Q211 = 0   ; TEMPO. AU FOND~", e$
-    "     Q208 = +9999 ", "  ; AVANCE RETRAIT~", e$
-    "    ", bq256, "  ; RETR. BRISE COPEAUX", e$
+    "     Q208 = +9999  ; AVANCE RETRAIT~", e$
+    "    ", bq256, "  ; RETR. BRISE COPEAUX~", e$
+	"     Q395 = 0   ; REFERENCE PROFONDEUR", e$	#+ TNC620	# 0 = valeurs profondeur suivant pointe # 1 = cylindrique
     if drill_4_axes = 1, n$, "L", *xabs, *yabs, sgcode, "M99", strcantext, e$
 	else, p_position_trou	# X Y
     perreurPar_perc 
     old_bq203 = bq203
     old_bq201 = bq201
-    #perreurTaraud   
+    #perreurTaraud  
 
 pchpbrk_2$  # Canned Chip Break Cycle
     if drill_4_axes = 1, p_drill_5axes_2
@@ -4850,7 +5080,8 @@ pchpbrk_3
     "    ", bq205, "  ; PROF. PASSE MINI~", e$
     "    ", bq211, "  ; TEMPO. AU FOND~", e$
     "     Q208 = +9999 ", "  ; AVANCE RETRAIT~", e$
-    "    ", bq256, "  ;RETR. BRISE COPEAUX", e$
+    "    ", bq256, "  ; RETR. BRISE COPEAUX~", e$
+	"     Q395 = 0   ; REFERENCE PROFONDEUR", e$	#+ TNC620	# 0 = valeurs profondeur suivant pointe # 1 = cylindrique
     old_bq203 = bq203
     old_bq201 = bq201
 
@@ -5063,10 +5294,88 @@ pmisc1_3
     old_bq203 = bq203
     old_bq201 = bq201
 
-pmisc2$     # Cycle d'alesage indexe G76
+pmisc2$     # Cycle de perçage profond DANS UN TROU
+	if drill_4_axes = 1, p_drill_5axes
+	gcode$ = 0
+	p_val_cycles_percage
+	if rotaxis$ <> 0, n$, s_com_open, "SUBSTITUTION D AXE", s_com_close, e$
+	bq202 = peck1$
+	bq205 = peck2$ 
+    bq256 = shftdrl$
+	bq211 = dwell$
+    bq212 = peckclr$
+	bq257 = retr$ 
+	if Secu_haut_P_205 = 0, Secu_haut_P_205 = 0.2
+	if Secu_bas_P_205 = 0, Secu_bas_P_205 = 0.2
+	#if Pt_depart_P_205  = 0, Pt_depart_P_205  = 0.2
+	if Avance_pre_po_P_205 = 0, Avance_pre_po_P_205 = 750
+	bq258 = Secu_haut_P_205 
+	bq259 = Secu_bas_P_205
+	bq379 = Pt_depart_P_205 
+	bq253 = Avance_pre_po_P_205
+    n$, "CYCL DEF 205 PERC. PROF. UNIVERS.~", e$
+    "    ", bq200, "  ; DISTANCE D'APPROCHE~", e$
+    "    ", bq201, "  ; PROFONDEUR~", e$
+    "    ", bq206, "  ; AVANCE PLONGEE PROF.~", e$
+    "    ", bq202, "  ; PROFONDEUR DE PASSE~", e$
+    "    ", bq203, "  ; COORD. SURFACE PIECE~", e$
+    "    ", bq204, "  ; SAUT DE BRIDE~", e$
+    "    ", bq212, "  ; VALEUR DE REDUCTION~", e$
+	"    ", bq205, "  ; PROF. PASSE MIN.~", e$	#+ TNC620
+	"    ", bq258, "  ; DIST. SECUR. EN HAUT~", e$	#+
+    "    ", bq259, "  ; DIST. SECUR. EN BAS~", e$	#+
+    "    ", bQ257, "  ; PROF.PERC.BRISE-COP.~", e$	#+ 
+	"    ", bq256, "  ; RETR. BRISE COPEAUX~", e$
+    "    ", bq211, "  ; TEMPO. AU FOND~", e$
+	"    ", bq379, "  ; POINT DE DEPART~", e$		#+
+    "    ", bq253, "  ; AVANCE PRE-POSIT.~", e$		#+	
+    "     Q208 = +9999  ; AVANCE RETRAIT~", e$
+	"     Q395 = 0   ; REFERENCE PROFONDEUR", e$	#+ TNC620	# 0 = valeurs profondeur suivant pointe # 1 = cylindrique
+    if drill_4_axes = 1, n$, "L", *xabs, *yabs, sgcode, "M99", strcantext, e$
+	else, p_position_trou	# X Y
+    perreurPar_perc 
+    old_bq203 = bq203
+    old_bq201 = bq201
+    #perreurTaraud   
 
 pmisc2_2$   # Canned Misc #2 Cycle
+    if drill_4_axes = 1, p_drill_5axes_2
+	p_val_cycles_percage
+    !bq201
+    gcode$ = 0
+    @bq201 ,@old_bq201 , @old_bq203 , @bq203
+    if bq201 <> old_bq201 | old_bq203 <> bq203, pmisc2_3
+    if drill_4_axes = 1, n$, "L", *xabs, *yabs, sgcode, "M99", strcantext, e$
+	else, p_position_trou	# X Y
 
+pmisc2_3
+    gcode$ = 0
+	bq202 = peck1$
+	bq205 = peck2$ 
+    bq256 = shftdrl$
+	bq211 = dwell$
+    bq212 = peckclr$
+	bq257 = retr$ 
+    n$, "CYCL DEF 205 PERC. PROF. UNIVERS.~", e$
+    "    ", bq200, "  ; DISTANCE D'APPROCHE~", e$
+    "    ", bq201, "  ; PROFONDEUR~", e$
+    "    ", bq206, "  ; AVANCE PLONGEE PROF.~", e$
+    "    ", bq202, "  ; PROFONDEUR DE PASSE~", e$
+    "    ", bq203, "  ; COORD. SURFACE PIECE~", e$
+    "    ", bq204, "  ; SAUT DE BRIDE~", e$
+    "    ", bq212, "  ; VALEUR DE REDUCTION~", e$
+	"    ", bq205, "  ; PROF. PASSE MIN.~", e$	#+ TNC620
+	"    ", bq258, "  ; DIST. SECUR. EN HAUT~", e$	#+
+    "    ", bq259, "  ; DIST. SECUR. EN BAS~", e$	#+
+    "    ", bQ257, "  ; PROF.PERC.BRISE-COP.~", e$	#+
+	"    ", bq256, "  ; RETR. BRISE COPEAUX~", e$	 
+    "    ", bq211, "  ; TEMPO. AU FOND~", e$
+	"    ", bq379, "  ; POINT DE DEPART~", e$		#+
+    "    ", bq253, "  ; AVANCE PRE-POSIT.~", e$		#+
+    "     Q208 = +9999  ; AVANCE RETRAIT~", e$
+	"     Q395 = 0   ; REFERENCE PROFONDEUR", e$	#+ TNC620	# 0 = valeurs profondeur suivant pointe # 1 = cylindrique
+    old_bq203 = bq203
+    old_bq201 = bq201
 #endregion
 
 #region palpage/perçage tres profond
@@ -5629,6 +5938,7 @@ s_erreur_S_maxi_renvoi_angle		: "ATTENTION ! S de rotation > S autorisé avec le
 s_erreur_angle_renvoi_fixe			: "ATTENTION ! Ce renvoi d'angle n'autorise pas de rotations !" 
 s_erreur_val_C_MM_perc				: "ATTENTION ! la valeur du choix du type % mm ne peut Etre à 0"  
 s_erreur_val_inf_perc				: "ATTENTION ! la valeur Z de l'ammorce de perçage doit Etre inf."
+s_erreur_L_brut_cylindrique			: "ATTENTION ! la valeur de L dans le brut doit être > 0 ! Mettre une reserve sur le dessus"
 
 p_erreur_messages
 	if affiche_num_op_MC = 1, s_erreur_message_0 = "ATTENTION ERREUR A L'OP: " + s_old_spost_arg_2 + " AVEC L'OUTIL N° " + no2str(t$)
@@ -5733,17 +6043,17 @@ perreur_pas_fil  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE à la fraise"
 		[
         if pas_filetage = 9.999, [  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE à la fraise"
             p_erreur_messages
-			"ERREUR NUM: 11", s_erreur_message_0, e$
+			#"ERREUR NUM: 11", s_erreur_message_0, e$
             result = mprint(s_erreur_pas_fil)
-            exitpost$
+            #exitpost$
             ]
         if pas_filetage <> paramT7, [   # ""ATTENTION l'outil et l'opération non pas le meme PAS !""
             p_erreur_messages
-			"ERREUR NUM: 12", s_erreur_message_0, e$
+			#"ERREUR NUM: 12", s_erreur_message_0, e$
             result = mprint(s_erreur_pas_fil2)
-            exitpost$
+            #exitpost$
             ]
-        p_erreur_avance_fil 
+        #p_erreur_avance_fil 
         ]
 
 perreur_num_outil  # "ATTENTION le numéro d'outil dépasse les 30 !" 
@@ -5884,11 +6194,11 @@ p_erreur_angles_renvoie_angle_2		# ICI ANGLES FIXES A INDIQUER --> ICI TETE A 4 
         ]	
 		
 p_erreur_perc_decomposes
-	#if perc_1er_perc_pour_C_ou_mm = 0, [
-		#p_erreur_messages
-		#"ERREUR NUM: 31", s_erreur_message_0, e$
-		#result = mprint(s_erreur_val_C_MM_perc)
-		#]
+	if perc_1er_perc_pour_C_ou_mm = 0, [
+		p_erreur_messages
+		"ERREUR NUM: 31", s_erreur_message_0, e$
+		result = mprint(s_erreur_val_C_MM_perc)
+		]
 	if P_er_perc_0 < P_er_perc_1 | peck1$ < P_er_perc_1, [
 		p_erreur_messages
 		"ERREUR NUM: 32", s_erreur_message_0, e$
@@ -6593,7 +6903,6 @@ preadbuf5   # Read Buffer 1
 [CTRL_TEXT_XML_BEGIN]  # All post text edits must be made through Control Definition Manager
 <?xml version="1.0" encoding="UTF-8"?>
 <mp_xml_post_text xml:space="preserve">
-#region DEFAULT
 	<control>
 		<control_label>CTRL_MILL|DEFAULT</control_label>
 		<language>fr-FR</language>
@@ -6603,8 +6912,8 @@ preadbuf5   # Read Buffer 1
 				<value>1</value>
 			</misc_1>
 			<misc_2>
-				<text>En 4 axes utiliser le Z sécu de l'OP : 1</text>
-				<value>1</value>
+				<text>4 axes utilis. Z sécu OP:1=axe A 0=axe B</text>
+				<value>0</value>
 			</misc_2>
 			<misc_3>
 				<text>Val. angulaire index. broche (mortaisage)</text>
@@ -6614,9 +6923,11 @@ preadbuf5   # Read Buffer 1
 			</misc_4>
 			<misc_5>
 				<text>Bris outil 1=TCH481 2=FRAISE 3=TCH586</text>
+				<value>1</value>
 			</misc_5>
 			<misc_6>
-				<text>Test_Bris_Out =1 (en FIN d OPERATION)</text>
+				<text>Bris_Out par 1=outil 2=FIN d'OPERATION</text>
+				<value>0</value>
 			</misc_6>
 			<misc_7>
 				<text>Blocage déblocage AXES ROT. 1=OUI 0=NON</text>
@@ -6652,13 +6963,19 @@ preadbuf5   # Read Buffer 1
 				<text>""</text>
 			</misc_6>
 			<misc_7>
-				<text>""</text>
+				<text>Cycle32 tolérance Usi. 0.1mm par défaut</text>
+				<inch_value>0</inch_value>
+				<metric_value>0.1</metric_value>
 			</misc_7>
 			<misc_8>
-				<text>""</text>
+				<text>Cycle32 tolérance Angulaire 3° par défaut</text>
+				<inch_value>0</inch_value>
+				<metric_value>3</metric_value>
 			</misc_8>
 			<misc_9>
-				<text>""</text>
+				<text>Cycle32 Mode 0=EB. 1=Finit. 0 par défaut</text>
+				<inch_value>0</inch_value>
+				<metric_value>0</metric_value>
 			</misc_9>
 			<misc_10>
 				<text>""</text>
@@ -6915,37 +7232,38 @@ preadbuf5   # Read Buffer 1
 		</misc1>
 		<misc2>
 			<description>
-				<text>""</text>
+				<text>Perçage prof. dans trou 205</text>
 			</description>
 			<feed_rate>
-				<text>""</text>
+				<text>Avance Q206</text>
 			</feed_rate>
 			<dwell>
-				<text>""</text>
+				<text>Tempo au fond Q211</text>
+				<value>0</value>
 			</dwell>
 			<clearance>
-				<text>""</text>
+				<text>Saut bride Q204</text>
 			</clearance>
 			<retract>
-				<text>""</text>
+				<text>Garde Q200</text>
 			</retract>
 			<depth>
-				<text>""</text>
+				<text>Profondeur Q201</text>
 			</depth>
 			<first_peck>
-				<text>""</text>
+				<text>Prof. de passe Q202</text>
 			</first_peck>
 			<subsequent_peck>
-				<text>""</text>
+				<text>Profondeur MINI Q205</text>
 			</subsequent_peck>
 			<peck_clearance>
-				<text>""</text>
+				<text>Valeur réduction Q212</text>
 			</peck_clearance>
 			<retract_amount>
-				<text>""</text>
+				<text>PROF. PERC. BRISE-COP Q257</text>
 			</retract_amount>
 			<shift>
-				<text>""</text>
+				<text>Retr. Brise-copeau Q256&gt;0</text>
 			</shift>
 		</misc2>
 		<drill_cycle_9>
@@ -7420,8 +7738,24 @@ preadbuf5   # Read Buffer 1
 		</misc1_custom_parameters>
 		<misc2_custom_parameters>
 			<description>
-				<text>Paramètres de cycle spécial 8</text>
+				<text>Cycle 205</text>
 			</description>
+			<parameter_7>
+				<text>distance sécu en HAUT, =0.2 si 0</text>
+				<value>0.2</value>
+			</parameter_7>	
+			<parameter_8>
+				<text>distance sécu en BAS, =0.2 si 0</text>
+				<value>0.2</value>
+			</parameter_8>
+			<parameter_9>
+				<text>Point de départ, =0 si 0</text>
+				<value>0</value>
+			</parameter_9>
+			<parameter_10>
+				<text>AVANCE PRE-POSITION, =750 si 0</text>
+				<value>750</value>
+			</parameter_10>
 		</misc2_custom_parameters>
 		<drill_cycle_9_custom_parameters>
 			<description>
@@ -7692,27 +8026,27 @@ preadbuf5   # Read Buffer 1
 				<text>""</text>
 			</misc_drill_1>
 			<misc_drill_2>
-				<text>""</text>
+				<text>Cycle 205 perçage prof.</text>
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Int. Exter. Rectangle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>REf. Int. Exter. Cercle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>REf. Exter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\COIN EXTER_1.bmp</resource>
 			</custom_drill_11>
 			<custom_drill_12>
 				<text>REf. Inter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN INTER_1.bmp</resource>
+				<resource>IMAGES PPs\COIN INTER_1.bmp</resource>
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>REf. en Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Cycle 14</text>
@@ -7722,7 +8056,7 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>REf. larg. rainure</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\RAINURE_1.bmp</resource>
+				<resource>IMAGES PPs\RAINURE_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Cycle 17</text>
@@ -7732,11 +8066,11 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>
@@ -7775,8 +8109,6 @@ preadbuf5   # Read Buffer 1
 			</canned_text_11>
 		</canned_text>
 	</control>
-#endregion 
-
 <control>
 		<control_label>CTRL_MILL|MILL_ST_HEIDENHAIN-ROTATION-A-OU-B</control_label>
 		<language>fr-FR</language>
@@ -7786,8 +8118,8 @@ preadbuf5   # Read Buffer 1
 				<value>1</value>
 			</misc_1>
 			<misc_2>
-				<text>En 4 axes utiliser le Z sécu de l'OP : 1</text>
-				<value>1</value>
+				<text>4 axes utilis. Z sécu OP:1=axe A 0=axe B</text>
+				<value>0</value>
 			</misc_2>
 			<misc_3>
 				<text>Val. angulaire index. broche (mortaisage)</text>
@@ -7797,9 +8129,11 @@ preadbuf5   # Read Buffer 1
 			</misc_4>
 			<misc_5>
 				<text>Bris outil 1=TCH481 2=FRAISE 3=TCH586</text>
+				<value>1</value>
 			</misc_5>
 			<misc_6>
-				<text>Test_Bris_Out =1 (en FIN d OPERATION)</text>
+				<text>Bris_Out par 1=outil 2=FIN d'OPERATION</text>
+				<value>0</value>
 			</misc_6>
 			<misc_7>
 				<text>Blocage déblocage AXES ROT. 1=OUI 0=NON</text>
@@ -7835,13 +8169,19 @@ preadbuf5   # Read Buffer 1
 				<text>""</text>
 			</misc_6>
 			<misc_7>
-				<text>""</text>
+				<text>Cycle32 tolérance Usi. 0.1mm par défaut</text>
+				<inch_value>0</inch_value>
+				<metric_value>0.1</metric_value>
 			</misc_7>
 			<misc_8>
-				<text>""</text>
+				<text>Cycle32 tolérance Angulaire 3° par défaut</text>
+				<inch_value>0</inch_value>
+				<metric_value>3</metric_value>
 			</misc_8>
 			<misc_9>
-				<text>""</text>
+				<text>Cycle32 Mode 0=EB. 1=Finit. 0 par défaut</text>
+				<inch_value>0</inch_value>
+				<metric_value>0</metric_value>
 			</misc_9>
 			<misc_10>
 				<text>""</text>
@@ -8091,37 +8431,38 @@ preadbuf5   # Read Buffer 1
 		</misc1>
 		<misc2>
 			<description>
-				<text>""</text>
+				<text>Perçage prof. dans trou 205</text>
 			</description>
 			<feed_rate>
-				<text>""</text>
+				<text>Avance Q206</text>
 			</feed_rate>
 			<dwell>
-				<text>""</text>
+				<text>Tempo au fond Q211</text>
+				<value>0</value>
 			</dwell>
 			<clearance>
-				<text>""</text>
+				<text>Saut bride Q204</text>
 			</clearance>
 			<retract>
-				<text>""</text>
+				<text>Garde Q200</text>
 			</retract>
 			<depth>
-				<text>""</text>
+				<text>Profondeur Q201</text>
 			</depth>
 			<first_peck>
-				<text>""</text>
+				<text>Prof. de passe Q202</text>
 			</first_peck>
 			<subsequent_peck>
-				<text>""</text>
+				<text>Profondeur MINI Q205</text>
 			</subsequent_peck>
 			<peck_clearance>
-				<text>""</text>
+				<text>Valeur réduction Q212</text>
 			</peck_clearance>
 			<retract_amount>
-				<text>""</text>
+				<text>PROF. PERC. BRISE-COP Q257</text>
 			</retract_amount>
 			<shift>
-				<text>""</text>
+				<text>Retr. Brise-copeau Q256&gt;0</text>
 			</shift>
 		</misc2>
 		<drill_cycle_9>
@@ -8558,8 +8899,24 @@ preadbuf5   # Read Buffer 1
 		</misc1_custom_parameters>
 		<misc2_custom_parameters>
 			<description>
-				<text>Paramètres de cycle spécial 8</text>
+				<text>Cycle 205</text>
 			</description>
+			<parameter_7>
+				<text>distance sécu en HAUT, =0.2 si 0</text>
+				<value>0.2</value>
+			</parameter_7>	
+			<parameter_8>
+				<text>distance sécu en BAS, =0.2 si 0</text>
+				<value>0.2</value>
+			</parameter_8>
+			<parameter_9>
+				<text>Point de départ, =0 si 0</text>
+				<value>0</value>
+			</parameter_9>
+			<parameter_10>
+				<text>AVANCE PRE-POSITION, =750 si 0</text>
+				<value>750</value>
+			</parameter_10>
 		</misc2_custom_parameters>
 		<drill_cycle_9_custom_parameters>
 			<description>
@@ -8830,27 +9187,27 @@ preadbuf5   # Read Buffer 1
 				<text>""</text>
 			</misc_drill_1>
 			<misc_drill_2>
-				<text>""</text>
+				<text>Cycle 205 perçage prof.</text>
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Int. Exter. Rectangle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>REf. Int. Exter. Cercle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>REf. Exter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\COIN EXTER_1.bmp</resource>
 			</custom_drill_11>
 			<custom_drill_12>
 				<text>REf. Inter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN INTER_1.bmp</resource>
+				<resource>IMAGES PPs\COIN INTER_1.bmp</resource>
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>REf. en Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Cycle 14</text>
@@ -8860,7 +9217,7 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>REf. larg. rainure</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\RAINURE_1.bmp</resource>
+				<resource>IMAGES PPs\RAINURE_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Cycle 17</text>
@@ -8870,11 +9227,11 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>

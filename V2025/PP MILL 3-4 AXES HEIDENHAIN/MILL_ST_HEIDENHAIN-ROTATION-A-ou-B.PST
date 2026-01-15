@@ -197,7 +197,7 @@ utilise_palette		= 0		# Affiche la gestion des palettes, codes M début et fin p
 
 Type_decalages		= 2		# Cycle de décallages/origine en OPERATIONS DE TRANSFORMATIONS
 							# 1 = CYCLE 247 UNIQUEMENT
-							# 2 = CYCLE 247 au DEPART et CYCLE DEF 7 sur les autre origines
+							# 2 = CYCLE 247 au DEPART et CYCLE DEF 7 sur les autres origines
 							
 #prEparation de l'outil SUIVANT
 bldnxtool$          = 1     # 0 = n'affiche pas la préparation de l'outil suivant
@@ -416,7 +416,7 @@ s_rot_plus_court_OFF: "M127 ; Rotation au plus court OFF"
 
 [STARTBIN]
 #property of FICAM, Eric Dauvilliers, e.dauvilliers@ficam.com, +33 (0)2 37 26 28 10
-scustpost_revision    : "25.3009" #:= Revision number for use by Resellers or customers.
+scustpost_revision    : "25.1710" #:= Revision number for use by Resellers or customers.
 
 #aide PPs
 #if prmcode$ = 20005, perc_prof = rpar(sparameter$, 1)  #affecte la valeur de la ligne NCI 20005 - colonne 1 A  la variable "perc_prof"
@@ -562,13 +562,13 @@ fmt "Y" 	2  stck_y_max  #Maximum stock block position (Y)
 fmt "Z" 	2  stck_z_max  #Maximum stock block position (Z)
 
 fmt  "DIST"	2  bottomz      		#Bottom of stock
-fmt  "L"  	2  topz         		#Top of stock
+fmt  "L"  	2  topz         		#Top of stock					L toujours >0
 fmt  ""   	2  stck_ll_x    		#Stock lower left corner X value
 fmt  ""   	2  stck_ll_y    		#Stock lower left corner Y value
 fmt  ""   	2  stck_ur_x   			#Stock upper right corner X value
 fmt  ""   	2  stck_ur_y    		#Stock upper right corner Y value
 fmt  "R"  	2  stck_cyl_dia 		#Stock diameter for Cylindrical stock
-fmt  "R0"	2  stck_cyl_dia_inter 	#Stock diameter for Cylindrical stock
+fmt  "RI"	2  stck_cyl_dia_inter 	#Stock diameter for Cylindrical stock
 # --------------------------------------------------------------------------
 fmt  "X" 	2 xr$
 fmt  "Y" 	2 yr$
@@ -1461,8 +1461,11 @@ pfr
 	        ]
 	    if F_variables = 1 & tool_op$ = 102 & fr$ <> -1 & (mi4$ = 0), fr$ = 51, frQ = fr$, *frQ	# surfaçage
 	    if fr_pos$ >= 0 & (nextop$ = 11 | mi4$ <> 0), fr_pos$  					# pas de FRQ -- OP 5 AXES
-	    if F_variables = 0 & fr_pos$ <> -1, fr_pos$                				# pas de FRQ	  			
-	    debut_out = 0
+	    if F_variables = 0 & fr_pos$ <> -1, [									# pas de FRQ
+			if debut_out = 1, *fr_pos$ 
+			else, fr_pos$                				
+			]	
+		debut_out = 0
 		]   
     p_erreur_avanceS    
     # gestion de l'avance entre 2 passes en surfaçage prmcode = 10116 avec tool_op = 102
@@ -1676,7 +1679,7 @@ pprep$      # bloc init post pro en remplacement de la def armoire
     rd_md$                  		# lecture de la definition machine
 	rd_tlpathgrp$      				# Lecture des éléments dans "param_read$. outils- BRUT" 
     if write_ops = 0, erreur = 1   	# Write NC Operation information MUST be enabled in CD
-	arctype$ = 5
+	#arctype$ = 5
     !erreur
     !serreur
     if erreur <> 0, [
@@ -1725,7 +1728,7 @@ p_force_config_pp
     # The following three initializations are used for full arc and helix arc output when the CD
     # is set to output R or signed R for arcs
 	# 1 = CC(Centre du Cercle, valeurs en ABSOLU) ou 5 = CR(Rayon du Cercle)
-    arctype$     	= 1    #Arc center type XY plane 1=abs(IJ), 2=St-Ctr, 3=Ctr-St, 4=unsigned inc., 5=rayon, 6=rayon non signé
+    arctype$     	= 5    #Arc center type XY plane 1=abs(IJ), 2=St-Ctr, 3=Ctr-St, 4=unsigned inc., 5=rayon, 6=rayon non signé
     arctypexz$   	= 1    #Arc center type XZ plane 1=abs(IJ), 2=St-Ctr, 3=Ctr-St, 4=unsigned inc., 5=rayon, 6=rayon non signé
     arctypeyz$   	= 1    #Arc center type YZ plane 1=abs(IJ), 2=St-Ctr, 3=Ctr-St, 4=unsigned inc., 5=rayon, 6=rayon non signé
 
@@ -2697,7 +2700,7 @@ p_ori_usi
 		n$, "workofs$", *workofs$, e$
 	    n$, "old_workofs", *old_workofs, e$ 
 		n$, "op_transformation :", *xform_op_id$, " ", *op_id$, "dec transf:", *workofs_dec, e$
-		n$, "mi1_prmcode, old_mi1 :", *mi1_prmcode, *old_mi1, e$
+		n$, "mi1_prmcode, old_mi1 :", *mi1_prmcode, " ", *old_mi1, e$
 		# xform_op_id$ & op_id$ même numéro = pas de transformation 
 		]
     s_INFO_tab_pt_0 = "ATTENTION ! utilisation du TABLEAU PT ZERO, à activer sur la CN -.D ! OP. MC: " + s_old_spost_arg_2 + " AVEC L'OUTIL " + no2str(t$)
@@ -2720,13 +2723,15 @@ p_ori_usi
 	if xform_op_id$ <> op_id$ & workofs$ <> old_workofs & workofs_dec > 0, [	
 		workofs_ = workofs$
 		if Type_decalages = 1 | debut = 2, 	[	# 1er en 247
+			if workofs_ = 0, workofs_ = 1						#+ Pb 1ère op transformée coord avec op. fantome = dec à 0
 			n$, "CYCL DEF 247 INIT. PT DE REF.~", e$
 	    	"  Q339=", *workofs_, "; NUMERO DE PT DE REF.", e$
 			]
-		if Type_decalages = 2 & debut <> 2, [
+		#if Type_decalages = 2 & debut <> 2, [
+		if Type_decalages = 2 & debut <> 2 & workofs$ <> 0, [	# Pb 1ère op transformée coord avec op. fantome = dec à 0
 			n$, "; SUIVANT TABLEAU POINT ZERO", e$
             n$, "CYCL DEF 7.0 POINT ZERO", e$
-            n$, "CYCL DEF 7.1", 35, *workofs_, e$
+            n$, "CYCL DEF 7.1xx", 35, *workofs_, e$
 			]
 		old_workofs = workofs$ 
 		]
@@ -2893,6 +2898,7 @@ p_block_form
             stck_cyl_dia = stck_ht$      #Define stock diameter
             ]
           # Output WORKPIECE line using values determined above / Define the stock for graphics - Cylinder
+		  if topz = 0, result = mprint(s_erreur_L_brut_cylindrique)
 		  stck_cyl_dia = stck_cyl_dia / 2 # Ici valeur au rayon
 		  if stock_cyl_axis = 0, s_axe_brut_cyl = "X"
 		  if stock_cyl_axis = 1, s_axe_brut_cyl = "Y" 
@@ -3999,7 +4005,7 @@ ptlchg0$
 	drill_4_axes = 0 
     if Mode_reglage_PP = 0, "syncax", *syncaxis$, "old_syn", *old_syncaxis, "nbr_combi", *nbr_combi, "erreur", *erreur, "compt_axes_rot", *compt_axes_rot, e$
 	pcan # arrosages vx et textes
-	if Test_bris_outils = 1, [
+	if Test_bris_outils = 2 & op_id$ <> old_op_id, [
 		pcool_off 
 		n$, *sm_01, e$
 		p_test_bris_outil
@@ -4099,6 +4105,7 @@ pspindle        #Spindle speed calculations for RPM
 	
 pspindchng      #Spindle speed change
 	if prv_spdir2 <> spdir2 & old_ssa <> zero, p_bloc_O, n$, *sm_01, e$
+	ssa = abs(ss$)	# en négatif suite op de transformation ?? --> positif
 	if old_ssa <> ssa | prv_spdir2 <> spdir2, [
 		if ssa <> 0, [
 			n$, "; POUR AUTRE ROTATION DE BROCHE", e$
@@ -4252,6 +4259,7 @@ peof$
 	#zabs = z$, gcode$ =0, n$, *sgcode, *zabs, e$
     #if tool_op$ <> 114, p_lubrif_OFF
 	p_lubrif_OFF
+	n$, *sm_01, e$
 	if sauve_ra_block_ >0, [				# Annulation du décallage FIN du renvoi d'angle  
 		n$, "CYCL DEF 7.0 POINT ZERO", e$
         n$, "CYCL DEF 7.1 0", e$
@@ -4259,7 +4267,8 @@ peof$
         n$, "CYCL DEF 7.3 0", e$
 		sauve_ra_block_ = -1 	
 		]	
-	if Test_bris_outils = 1, p_test_bris_outil
+	!mi6$, !mi5$, e$
+	if mi6$ = 1, p_test_bris_outil
 	p_ori_usi_annul
 	p_degage_fin
 	if bldnxtool$ = 1 & type_prep_outil = 2,	[	
@@ -4303,7 +4312,7 @@ peof$
 		n$, s_com_open, "TEMPS TOTAL CORRIGE ", *Heure, *min, *sec, s_com_close, e$
 		]  
 	# 
-    n$, "M2", e$
+    n$, "M30", e$
     n$, ";", e$
 	n$, "LBL 99 ; ANNULATION", e$
     n$, "CYCL DEF 7.0 POINT ZERO", e$
@@ -4808,16 +4817,17 @@ pchpbrk$    # Cycle de brise copeaux
     "    ", bq204, "  ; SAUT DE BRIDE~", e$
     "    ", bq212, "  ; VALEUR DE REDUCTION~", e$
     "    ", bq213, "  ; NB BRISE-COPEAUX~", e$
+	"     Q205 = 0   ; PROF. PASSE MIN.~", e$	#+ TNC620
     "    ", bq211, "  ; TEMPO. AU FOND~", e$
-    "     Q211 = 0   ; TEMPO. AU FOND~", e$
-    "     Q208 = +9999 ", "  ; AVANCE RETRAIT~", e$
-    "    ", bq256, "  ; RETR. BRISE COPEAUX", e$
+    "     Q208 = +9999  ; AVANCE RETRAIT~", e$
+    "    ", bq256, "  ; RETR. BRISE COPEAUX~", e$
+	"     Q395 = 0   ; REFERENCE PROFONDEUR", e$	#+ TNC620
     if drill_4_axes = 1, n$, "L", *xabs, *yabs, sgcode, "M99", strcantext, e$
 	else, p_position_trou	# X Y
     perreurPar_perc 
     old_bq203 = bq203
     old_bq201 = bq201
-    #perreurTaraud   
+    #perreurTaraud    
 
 pchpbrk_2$  # Canned Chip Break Cycle
     if drill_4_axes = 1, p_drill_5axes_2
@@ -5629,7 +5639,7 @@ s_erreur_S_maxi_renvoi_angle		: "ATTENTION ! S de rotation > S autorisé avec le
 s_erreur_angle_renvoi_fixe			: "ATTENTION ! Ce renvoi d'angle n'autorise pas de rotations !" 
 s_erreur_val_C_MM_perc				: "ATTENTION ! la valeur du choix du type % mm ne peut Etre à 0"  
 s_erreur_val_inf_perc				: "ATTENTION ! la valeur Z de l'ammorce de perçage doit Etre inf."
-
+s_erreur_L_brut_cylindrique			: "ATTENTION ! la valeur de L dans le brut doit être > 0 ! Mettre une reserve sur le dessus"
 p_erreur_messages
 	if affiche_num_op_MC = 1, s_erreur_message_0 = "ATTENTION ERREUR A L'OP: " + s_old_spost_arg_2 + " AVEC L'OUTIL N° " + no2str(t$)
 	if affiche_num_op_MC = 2, s_erreur_message_0 = "ATTENTION ERREUR A L'OP: " + no2str(op_number) + " AVEC L'OUTIL N° " + no2str(t$)
@@ -5733,17 +5743,17 @@ perreur_pas_fil  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE à la fraise"
 		[
         if pas_filetage = 9.999, [  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE à la fraise"
             p_erreur_messages
-			"ERREUR NUM: 11", s_erreur_message_0, e$
+			#"ERREUR NUM: 11", s_erreur_message_0, e$
             result = mprint(s_erreur_pas_fil)
-            exitpost$
+            #exitpost$
             ]
         if pas_filetage <> paramT7, [   # ""ATTENTION l'outil et l'opération non pas le meme PAS !""
             p_erreur_messages
-			"ERREUR NUM: 12", s_erreur_message_0, e$
+			#"ERREUR NUM: 12", s_erreur_message_0, e$
             result = mprint(s_erreur_pas_fil2)
-            exitpost$
+            #exitpost$
             ]
-        p_erreur_avance_fil 
+        #p_erreur_avance_fil 
         ]
 
 perreur_num_outil  # "ATTENTION le numéro d'outil dépasse les 30 !" 
@@ -6593,7 +6603,6 @@ preadbuf5   # Read Buffer 1
 [CTRL_TEXT_XML_BEGIN]  # All post text edits must be made through Control Definition Manager
 <?xml version="1.0" encoding="UTF-8"?>
 <mp_xml_post_text xml:space="preserve">
-#region DEFAULT
 	<control>
 		<control_label>CTRL_MILL|DEFAULT</control_label>
 		<language>fr-FR</language>
@@ -6614,9 +6623,11 @@ preadbuf5   # Read Buffer 1
 			</misc_4>
 			<misc_5>
 				<text>Bris outil 1=TCH481 2=FRAISE 3=TCH586</text>
+				<value>1</value>
 			</misc_5>
 			<misc_6>
-				<text>Test_Bris_Out =1 (en FIN d OPERATION)</text>
+				<text>Bris_Out par 1=outil 2=FIN d'OPERATION</text>
+				<value>0</value>
 			</misc_6>
 			<misc_7>
 				<text>Blocage déblocage AXES ROT. 1=OUI 0=NON</text>
@@ -7797,9 +7808,11 @@ preadbuf5   # Read Buffer 1
 			</misc_4>
 			<misc_5>
 				<text>Bris outil 1=TCH481 2=FRAISE 3=TCH586</text>
+				<value>1</value>
 			</misc_5>
 			<misc_6>
-				<text>Test_Bris_Out =1 (en FIN d OPERATION)</text>
+				<text>Bris_Out par 1=outil 2=FIN d'OPERATION</text>
+				<value>0</value>
 			</misc_6>
 			<misc_7>
 				<text>Blocage déblocage AXES ROT. 1=OUI 0=NON</text>

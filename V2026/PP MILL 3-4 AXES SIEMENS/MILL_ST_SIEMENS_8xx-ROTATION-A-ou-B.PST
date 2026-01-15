@@ -83,7 +83,7 @@ coefficient_G0		: 10	# Facteur de correction des rapides en --> accélération &
 # mi6$ utilisé pour "Test_Bris_Out =1 (en FIN d OPERATION)
 # mi7$ utilisé pour Ecrire M10 M11 (blocage/dEblocage du diviseur)
 # mi8$
-# mi9$ - CYCLE832 pour "Cycle FORCER LE lissage 832 
+# mi9$ - CYCLE832 pour FORCER LE lissage 832 
 #
 # mr1$ 
 # mr7$ FORCE LE Cycle832 à 3 valeurs--> Tol: mm		Type_lissage = 1
@@ -251,7 +251,7 @@ lire_def_machine    = 1     # 1 = Lire les valeurs de la def machine / armoire -
                             # 0 = suivant les données du PP
 
 Systeme_rot_plans	: 0 	# SystEme de gestion des différentes valeurs lors d'une rotation
-                                # 0  = pas de calculs --> origine gEnEralement au centre de la palette
+                                # 0  = pas de calculs --> origine gEnEralement **PAR FACE/G55/G56... ou **au centre de la palette
                                 # 1  = calculs AUTO "G68" --> origine oU on veut
                                 # 2X =	Calcul suivant une transition de l'origine CALCULé
 									# 21 = utilise le sous-programme O8000 pour calculer automatiquement les origines pour chaque face
@@ -278,7 +278,6 @@ affiche_num_op_MC		= 2		# affiche le numéro de l'OP Masctercam extraite
 
 affiche_type_op_MC		= 1		# affiche le type de l'opération MC
 
-
 groupe_descripteur	   	= 0		# Affiche en ENTETE 0 = NON
 									# 1 Nom de la Machine
 									# 2 Nom du groupe PRINCIPAL d'opErations
@@ -286,7 +285,7 @@ groupe_descripteur	   	= 0		# Affiche en ENTETE 0 = NON
 									# 4 Descripteur de fichier A ACTIVER AVEC LE G1
 									# 5 Les 4 									
 
-nom_programmeur_PC 		= 1 	# Affiche le nom du programmeur
+nom_programmeur_PC 		= 0 	# Affiche le nom du programmeur
 									# 1 = Nom du programmeur
 									# 2 = Non de l'ORDI
 									# 3 = Les deux
@@ -309,7 +308,7 @@ type_cycle_percages		: 2		# type de cycles de percage
 prof_cycle_Abs_Relatif	: 1		# 1 = Z en Absolu  --> DP
 								# 2 = Z en Relatif --> DPR
 																													
-Type_lissage 			= 3    # CYCLE832 & MODE PRISMATIQUE
+Type_lissage 			= 11    # CYCLE832 & MODE PRISMATIQUE // infos page 275 "manuel sinumerik 840.pdf"
 								# 1 = CYCLE832 ON avec prise en compte de la TOLERANCE de l'opération MASTERCAM ....mr10$/OK
 										# EBAUCHE tol >= 0.05 		_ROUGH
 										# DEMI-FINITION tol < 0.05	_SEMIFIN
@@ -501,7 +500,7 @@ s_reset_AB			: "M31 (REMISE A ZERO AXE A-B)"		# HURCO M31
 
 [STARTBIN]
 #property of FICAM, Eric Dauvilliers, e.dauvilliers@ficam.com, +33 (0)2 37 26 28 10
-scustpost_revision    : "26.3009" #:= Revision number for use by Resellers or customers.
+scustpost_revision    : "26.1212" #:= Revision number for use by Resellers or customers.
 
 #aide PPs
 #if prmcode$ = 20005, perc_prof = rpar(sparameter$, 1)  #affecte la valeur de la ligne NCI 20005 - colonne 1 A  la variable "perc_prof"
@@ -514,7 +513,7 @@ sens_A_B        	: 1     	# pour inverser les calculs de l'axe A/B -1
 diviseur    		: -1    	# diviseur tourne autour de X=1-->A autour de Y=2-->B // DEF MACHINE=-1
 
 # ZONE de FORMULES  si : uniquement au dédut si = constante
-yes$           	: 1 
+yes$           	= 1 
 no$            	= 0 
 
 rpd_typ_v7$ 	: 1     # Use Version 7 style contour flags?
@@ -1262,7 +1261,6 @@ ori_9 : 0
 degage_ap_out 	: 1
 rot_tlchg_zero  : 0
 old_t 			: -9999
-Test_bris_outils = mi6$ 
 
 # Variables, grande vitesse - CYCLE832
 cycle832_from_miscval 	: 0  	# mi9$ CYCLE832 tolérance et valeur technologique de Misc Values ? 0=Non (valeurs calculées par Pst), 1=Oui
@@ -2435,6 +2433,10 @@ ptype_deg_Fin
 #region decallages_origines
 # Gestion des G54 A G59 et 505 A  599
 s_erreur_num_origine : "ATTENTION ERREUR de numéro d'origine Exemple 1=54 2=55 ..."
+fmt "G"    12 workofs_trans
+fmt "G"    12 old_workofs_trans
+workofs_trans : -999
+old_workofs_trans : -999
 p_ori_usi
 	# OPERATIONS TRANSFORMATIONS 
 		# MODE 1 "AUTO ORIGINES" PASSENT A 1
@@ -2448,12 +2450,23 @@ p_ori_usi
 	    n$, "workofs_", *workofs_, e$
 		n$, "workofs$", *workofs$, e$
 	    n$, "old_workofs", *old_workofs, e$
-		n$, "op_transformation :", *xform_op_id$, " ", *op_id$, "dec transf:", *workofs_dec, e$	
+		n$, "op_transformation :", *xform_op_id$, " ", *op_id$, "dec transf:", *workofs_dec, e$	 
+		n$, *workofs_trans, " ", *old_workofs_trans, e$
 		# xform_op_id$ & op_id$ même numéro = pas de transformation
 		]
     spaces$ = 1
     # OPERATIONS TRANSFORMEES 
-	if xform_op_id$ <> op_id$ & workofs$ <> old_workofs & workofs_dec > 0, workofs_ = workofs$	
+	if xform_op_id$ <> op_id$ & workofs$ <> old_workofs_trans, [	# & workofs_dec > 1
+		!workofs_trans, !workofs$, !old_workofs_trans 
+		workofs_trans = workofs$	
+		if workofs$ <> prv_workofs$ | debut_out = 1, [
+			g_wcs = workofs_trans + 54
+			if g_wcs <= 54, n$, *g_wcs, e$
+	        if g_wcs > 59 & g_wcs < 151, g_wcs = g_wcs + 445, n$, *g_wcs, e$
+			]
+		old_workofs_trans = workofs_trans
+		]	
+
 	if workofs_ > 0 & workofs_ <> old_workofs, [
         g_wcs = workofs_ + 54
 		if g_wcs <= 54, n$, *g_wcs, e$
@@ -2461,7 +2474,13 @@ p_ori_usi
 		else, n$, *g_wcs, e$
 		old_workofs = workofs_
         ]
-    if workofs_ <= 0 & workofs_ <> old_workofs, g_wcs = 54, n$, *g_wcs, e$, old_workofs = workofs_
+
+	if workofs_ <= 0 & workofs_ <> old_workofs & old_workofs_trans < 0, [
+		g_wcs = 54
+		n$, *g_wcs, e$
+		old_workofs = workofs_
+		]
+	
 	if tox4$ <> 0 | toy4$ <> 0 | toz4$ <> 0, [
 		if tox4$ <> old_tox4 | toy4$ <> old_toy4 | toz4$ <> old_toz4, n$, s_com_open, "TRANS", *tox4$, *toy4$, *toz4$, s_com_close, e$	
 		old_tox4 = tox4$
@@ -2530,7 +2549,10 @@ pfr
 	        ]
 	    if F_variables = 1 & tool_op$ = 102 & fr$ <> -1 & (mi4$ = 0), fr$ = 51, frQ = fr$, *frQ	# surfaçage
 	    if fr_pos$ >= 0 & (nextop$ = 11 | mi4$ <> 0), fr_pos$  					# pas de F= -- OP 5 AXES
-	    if F_variables = 0 & fr_pos$ <> -1, fr_pos$                				# pas de F=	  			
+	    if F_variables = 0 & fr_pos$ <> -1, [									# pas de F=	
+			if debut_out = 1, *fr_pos$ 											# force apres l'appel de l'outil              				
+			fr_pos$
+			]   			
 	    debut_out = 0
 		]   
     p_erreur_avanceS    
@@ -3794,7 +3816,7 @@ ptlchg0$
 		]
 	affiche_m0 = 1
 	comment$ 
-	if ss$ <> old_ssa, ssa = ss$, n$, ssa, spdlon, e$
+	pspindchng 
 	if op_id$ <> old_op_id, p_ori_usi
 	pfrvar
 	if ra_type$ = 1 & ra_block$ >0, [				# Renvoi d'ANGLE
@@ -3863,6 +3885,7 @@ pspindle        #Spindle speed calculations for RPM
 	
 pspindchng      #Spindle speed change
 	if prv_spdlsel <> spdlsel & old_ssa <> zero, p_bloc_O, n$, *sm01, e$
+	ssa = abs(ss$)	# en négatif suite op de transformation ?? --> positif
 	if old_ssa <> ssa | prv_spdlsel <> spdlsel, [
 		if ssa <> 0, [
 	 		n$, ssa, e$
@@ -3884,6 +3907,7 @@ ptlchg$      # Chang T<>prv_tool
 	increment_op_outil = 1 
 	affichage_cycle = 1 
 	old_workofs = -999
+	old_workofs_trans = -999
 	if palpeur = 1,	[
 	    n$, "M82 ; soufflage OFF", e$
 	    n$, "M71 ;Desactivation du palpeur", e$   
@@ -4721,8 +4745,11 @@ pmx$        # Gestion 4 axes continue avec fonction 5 axes
         else, gcode$ = 1
         if gcode$ = 1,	[
             @xabs, @yabs, @old_x, @old_y
-            if xabs <> old_x | yabs <> old_y, n$, sinc_abs, p_ori_usi, sgcode, xabs, yabs, zabs, p_axeAB_pmx, pfr, e$
-            else, n$, sinc_abs, p_ori_usi, sgcode, xabs, yabs, zabs, p_axeAB_pmx, pfr, e$
+            #if xabs <> old_x | yabs <> old_y, n$, sinc_abs, sgcode, xabs, yabs, zabs, p_axeAB_pmx, pfr, e$ 
+            #else, n$, sinc_abs, sgcode, xabs, yabs, zabs, p_axeAB_pmx, pfr, e$	
+			n$, sinc_abs, sgcode,
+				if cc$ = 41 | cc$ = 42 & cc$ <> old_cc & motst$ <> 6, pcorrecteur_D
+				xabs, yabs, zabs, p_axeAB_pmx, pfr, e$
             ]
         else, n$, sinc_abs, sgcode, xabs, yabs, zabs, p_axeAB_pmx, e$
 		!x$, !y$, !z$, !xr$, !yr$, !zr$
@@ -4764,6 +4791,7 @@ p_debut_pmx
 	
 	if diviseur = 1, n$, *sgcode, "G17", *xabs, *new_y, ssa, spdlon, e$ 	
 	if diviseur = 2, n$, *sgcode, "G17", *new_x, *yabs, ssa, spdlon, e$	
+	if cc$ = 41 | cc$ = 42, p_correct_r_5x_c
 	zr_ = zr$		
 	if opcode$ <> 16, n$, *zabs, p_lubrif_ON, e$
 	if opcode$ = 16, new_z = old_z, n$, *zr_, p_lubrif_ON, e$ 	# *new_z, p_lubrif_ON, e$
@@ -4775,59 +4803,74 @@ p_debut_pmx
 	
 pmx_end$	#FIN de chaque BLOC pmx$
 	if Mode_reglage_PP = 0, "pmx_end_: ", e$
+					if old_cc = 41 | old_cc = 42 & cc$ = 140, "G40", old_cc = cc$  
+	
 
 p_correct_r_5x_c        
     n$, "; --------------", e$
     n$, "; indique le type d'outil pour la correction", e$
     n$, "; de rayon en 5 axes continus", e$
+	#n$, "; ATTENTION à bien définir le BON type d'outil sur la CN", e$
     n$, "; A ne pas modifier", e$
+	r_bout_out = paramT6
+	A_bout_out = paramT8
     spaces$ = 0
-    if paramT4 = 2,	[
-            r_bout_out = paramT6
-            n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 110 ; FR BOULE", e$
-            n$, " ", 36, "TC_DP6 [", 36, "P_TOOLNO,1] = ", *r_bout_out, " ; RAYON", e$
-            n$, " CUT3DF ; correction normale a la surface", e$
-            ]
-    #if paramT4 = 2,	[
-            #r_bout_out = paramT6
-            #n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 111 ; FR A BOUT ROND", e$
-            #n$, " ", 36, "TC_DP6 [", 36, "P_TOOLNO,1] = ", *r_bout_out, " ;  RAYON", e$
-            #n$, " CUT3DF ; correction normale a la surface", e$
-            #]
-    if paramT4 = 0 & paramT8 = 180, [
-            n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 120 ; ou 130 FR DROITE", e$
-            n$, " CUT3DC ; correction peripherique", e$
-            ]
-    if paramT4 = 1,	[
-            r_bout_out = paramT6
-            n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 121 ; ou 131 FR TORIQUE", e$
-            n$, " ", 36, "TC_DP6 [", 36, "P_TOOLNO,1] = ", *r_bout_out, " ; RAYON", e$
-            n$, " CUT3DC ; correction peripherique", e$
-            ]
-    if paramT8 <> 180, [
-            A_bout_out = paramT8
-            n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 155 ; FR CONIQUE", e$
-            n$, " ", 36, "TC_DP11 [", 36, "P_TOOLNO,1] = ", *A_bout_out, " ; ANGLE", e$
-            n$, " CUT3DC ; correction peripherique", e$
-            ]
-    spaces$ = 1
+    if paramT2 = 11, [		
+        r_bout_out = paramT6
+        n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 110 ; FR BOULE", e$
+        n$, " ", 36, "TC_DP6 [", 36, "P_TOOLNO,1] = ", *r_bout_out, " ; RAYON", e$
+        n$, " CUT3DF ; correction normale a la surface", e$
+        ]
+    if paramT2 = 27, [
+        n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 111 ; FR A BOUT ROND-LENTILLE", e$
+        n$, " ", 36, "TC_DP6 [", 36, "P_TOOLNO,1] = ", *r_bout_out, " ;  RAYON", e$
+        n$, " CUT3DF ; correction normale a la surface", e$
+        ]
+    if paramT2 = 10, [	#paramT8 = 180	--> Problème sur la 2026 ANGLE DROIT = 45° !!!!!!
+        n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 120 ; ou 130 FR DROITE", e$
+        n$, " CUT3DC ; correction peripherique", e$
+        ]
+    if paramT2 = 19, [	
+        n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 121 ; ou 131 FR TORIQUE", e$
+        n$, " ", 36, "TC_DP6 [", 36, "P_TOOLNO,1] = ", *r_bout_out, " ; RAYON", e$
+        n$, " CUT3DC ; correction peripherique", e$
+        ]
+    if paramT2 = 17 & r_bout_out = 0, [			
+        n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 155 ; FR CONIQUE TRONQUEE", e$
+        n$, " ", 36, "TC_DP11 [", 36, "P_TOOLNO,1] = ", *A_bout_out, " ; ANGLE", e$
+        n$, " CUT3DC ; correction peripherique", e$
+        ]
+    if paramT2 = 17 & r_bout_out > 0 & paramT5 <> (r_bout_out*2), [	
+		n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 156 ; FR CONIQUE-TORIQUE", e$
+		n$, " ", 36, "TC_DP11 [", 36, "P_TOOLNO,1] = ", *A_bout_out, " ; ANGLE", e$
+		n$, " ", 36, "TC_DP7 [", 36, "P_TOOLNO,1] = ", *r_bout_out, " ; RAYON", e$
+		n$, " CUT3DC ; correction peripherique", e$
+		]
+	if paramT2 = 17 & r_bout_out > 0 & paramT5 = (r_bout_out*2), [	
+		n$, " ", 36, "TC_DP1 [", 36, "P_TOOLNO,1] = 157 ; FR BOULE-CONIQUE", e$
+		n$, " ", 36, "TC_DP11 [", 36, "P_TOOLNO,1] = ", *A_bout_out, " ; ANGLE", e$
+		n$, " ", 36, "TC_DP6 [", 36, "P_TOOLNO,1] = ", *r_bout_out, " ; RAYON", e$
+		n$, " CUT3DF ; correction normale a la surface", e$
+		]
+	spaces$ = 1
     n$, "; --------------", e$
 #endregion 
 
 #region Pbloc_appelEs
 p_aff_infos_cycle832
-	"OP_Surface_ebauche", *OP_Surface_ebauche, e$
-	"OP_Surface_finition", *OP_Surface_finition, e$
+	"OP_Surface_ebauche ", *OP_Surface_ebauche, e$
+	"OP_Surface_finition ", *OP_Surface_finition, e$
 	"cycle832_tech ", *cycle832_tech, e$
-	"tool_op$", *tool_op$, e$
-	"hs_surf_style", *hs_surf_style, e$
-	"cycle832_format", *cycle832_format, e$ 
-	"tolerance_usinage_3D", *tolerance_usinage_3D, e$
-	"tolerance_usinage_2D", *tolerance_usinage_2D, e$
-	"tolerance_usinage_REEL", *tolerance_usinage_REEL, e$
-	"OLD_tolerance_usinage", *OLD_tolerance_usinage, e$
-	"OP_percage", *OP_percage, e$
-	"p_affiche_options", *posi_options, e$
+	"tool_op$ ", *tool_op$, e$
+	"hs_surf_style ", *hs_surf_style, e$
+	"cycle832_format ", *cycle832_format, e$ 
+	"tolerance_usinage_3D ", *tolerance_usinage_3D, e$
+	"tolerance_usinage_2D ", *tolerance_usinage_2D, e$
+	"tolerance_usinage_REEL ", *tolerance_usinage_REEL, e$
+	"tolerance_usinage_MAX_% ", *tolerance_usinage_max_pcent, e$
+	"OLD_tolerance_usinage ", *OLD_tolerance_usinage, e$
+	"OP_percage ", *OP_percage, e$
+	"p_affiche_options ", *posi_options, e$
 	"cycle832_from_miscval ", *cycle832_from_miscval, e$
 	#*prv_mr7$, *prv_mr8$, *prv_mr9$, *prv_mr10$, e$
 	#*mi9$, *mr7$, *mr8$, *mr9$, *mr10$, e$  	
@@ -4972,6 +5015,7 @@ fmt     2 tolerance_usinage_2D
 fmt     2 OLD_tolerance_usinage_2D
 fmt     2 tolerance_usinage_5x
 fmt     2 tolerance_usinage_REEL 
+fmt     2 tolerance_usinage_max_pcent 
 fmt     2 OLD_tolerance_usinage
 fmt     4 Type_lissage
 fmt     2 tol_tab_Cycle832
@@ -4997,7 +5041,7 @@ p_lissage
     #    _TOP_SURFACE_SMOOTH_ON	
 	
 	!Type_lissage,!OP_Surface_ebauche,!OP_Surface_finition,!hs_surf_style
-	!cycle832_format,!tolerance_usinage_3D,!OLD_tolerance_usinage,!OP_percage
+	!cycle832_format,!tolerance_usinage_3D,!tolerance_usinage_max_pcent,!OLD_tolerance_usinage,!OP_percage
 	
     if tolerance_usinage_5x <> 0, tolerance_usinage_3D = tolerance_usinage_5x
     if Type_lissage = 1 & OP_percage = 0,	[
@@ -5021,6 +5065,7 @@ p_lissage
         else,	[	# OPs 3D
             if (OP_Surface_ebauche = 1 | OP_Surface_finition = 1) & (tolerance_usinage_3D <> OLD_tolerance_usinage_3D), [
 				n$, "; Lissage OPs 3D", e$
+				if tolerance_usinage_max_pcent > tolerance_usinage_3D, tolerance_usinage_3D = tolerance_usinage_max_pcent
 				if tolerance_usinage_3D <= 0.025, n$, "CYCLE832(", *tolerance_usinage_3D, ",_FINISH,1)", e$									#",_ORI_FINISH,",
 	            if tolerance_usinage_3D > 0.025 & tolerance_usinage_3D < 0.05, n$, " CYCLE832(", *tolerance_usinage_3D, ",_SEMIFIN,1)", e$	#",_ORI_SEMIFIN,0.1)",
 	            if tolerance_usinage_3D >= 0.05, n$, "CYCLE832(", *tolerance_usinage_3D, ",_ROUGH,1)", e$									#",_ORI_ROUGH,0.8)",
@@ -5046,11 +5091,13 @@ p_lissage
 		!OP_Surface_ebauche, !OP_Surface_finition		
 		if OP_Surface_ebauche = 1, cycle832_tech = 3, tol_tab_Cycle832_aff = 0.1	# EBAUCHE
 		if OP_Surface_finition = 1 & (surep_XY_2D >0 | surep_Z_2D >0 | surep_XY_3D >0 | surep_Z_3D >0), cycle832_tech = 2, tol_tab_Cycle832_aff = 0.05	# SI SUREP FINITION --> DEMI-FINITION
-		if cycle832_tech <> 2 & (OP_Surface_finition = 1 & (surep_XY_2D =0 | surep_Z_2D =0 | surep_XY_3D =0 | surep_Z_3D =0)), , cycle832_tech = 1, tol_tab_Cycle832_aff = 0.01	# FINITION			
+		if cycle832_tech <> 2 & (OP_Surface_finition = 1 & (surep_XY_2D =0 | surep_Z_2D =0 | surep_XY_3D =0 | surep_Z_3D =0)), cycle832_tech = 1, tol_tab_Cycle832_aff = 0.01	# FINITION			
 		
 		#tol_tab_Cycle832_aff = flook (4, tolerance_usinage_3D)	??
 		
-		if cycle832_tech = 0, cycle832_tech = 1	# force le mode finition pour les OPS 2D si rien de défini
+		if cycle832_tech = 0 & OP_Surface_ebauche = 0 & OP_Surface_finition = 0, [	# force le mode finition pour les OPS 2D si rien de défini
+			tol_tab_Cycle832_aff = tolerance_usinage_2D, cycle832_tech = 1			# tolérance de l'opération
+			]
 		
 		if cycle832_format = 1, [	#(0, 1, 2, 3)
 			n$, s_com_open, "EN DEVELOPPEMENT", s_com_close, e$
@@ -5417,26 +5464,22 @@ ptool_insp      # inspection des plaquettes/outil
 #endregion
 
 #region test_bris_outil
-sbris_outil  : "CALL PGM TNC:\USINAGE\L_BREAK_TEST.H"   # macro appel de sous programme pour test bris_outil  
-sbris_outil1 : "CALL PGM TNC:\dmg\BRIS-FORET.H"    		# macro appel de sous programme pour test bris_outil
-sbris_outil2 : "CALL PGM TNC:\dmg\BRIS-FRAISE.H"    	# macro appel de sous programme pour test bris_outil
-
 p_test_bris_outil                    # controle bris outil
 	type_test_bris_outils = mi5$
 	Test_bris_outils = mi6$ 
     if type_test_bris_outils <> 0, 	[
 		if type_test_bris_outils = 1,	[
-			"CYCLE NUM. 1 DE BRIS D OUTIL A DEFINIR",e$ 
-			n$, ";TEST BRIS OUTIL FORET", e$ 
+			n$, s_com_open, "CYCLE NUM. 1 DE BRIS D OUTIL A DEFINIR", s_com_close, e$ 
+			n$, s_com_open, "TEST BRIS OUTIL FORET", s_com_close, e$ 
 			#n$, sbris_outil1, e$
 			]
 		if type_test_bris_outils = 2,	[
-			"CYCLE NUM. 2 DE BRIS D OUTIL A DEFINIR",e$ 
-			n$, ";TEST BRIS OUTIL FRAISE", e$ 
+			n$, s_com_open, "CYCLE NUM. 2 DE BRIS D OUTIL A DEFINIR", s_com_close, e$ 
+			n$, s_com_open, "TEST BRIS OUTIL FRAISE", s_com_close, e$ 
 			#n$, sbris_outil2, e$
 			]
 		if type_test_bris_outils = 3,	[
-			"CYCLE NUM. 3 DE BRIS D OUTIL A DEFINIR",e$ 
+			n$, s_com_open, "CYCLE NUM. 3 DE BRIS D OUTIL A DEFINIR", s_com_close, e$  
 			]		
 		type_test_bris_outils = 0
 		Test_bris_outils = 0
@@ -5640,17 +5683,17 @@ perreur_pas_fil  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE A  la fraise"
 	    [
 	    if pas_filetage = 9.999, [  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE A  la fraise"
 		    p_erreur_messages
-			"ERREUR NUM: 13", s_erreur_message_0, e$
+			#"ERREUR NUM: 13", s_erreur_message_0, e$
 		    result = mprint(s_erreur_pas_fil)
-		    exitpost$
+		    #exitpost$
 		    ]
 		if pas_filetage <> paramT7, [   # ""ATTENTION l'outil et l'opEration non pas le meme PAS !""
 		    p_erreur_messages
-			"ERREUR NUM: 14", s_erreur_message_0, e$
+			#"ERREUR NUM: 14", s_erreur_message_0, e$
 		    result = mprint(s_erreur_pas_fil2)
-		    exitpost$
+		    #exitpost$
 		    ]
-	    p_erreur_avance_fil 
+	    #p_erreur_avance_fil 
 	    ]
 
 perreur_num_outil  # "ATTENTION le numEro d'outil dEpasse les 60 !" 
@@ -7963,7 +8006,7 @@ stypT13 : "TOURTEAU"
 stypT14 : "FR. 3 T."
 stypT15 : "FR. CONCAVE"
 stypT16 : "FR. QUEUE D ARONDE"
-stypT17 : "FR. CONIQUE TRONQUEE"
+stypT17 : "FR. CONIQUE RAYONNEE TRONQUEE"
 stypT18 : "FR. SPHERIQUE"
 stypT19 : "FR. TORIQUE"
 stypT20 : "SPECIALE"
@@ -8318,6 +8361,7 @@ pparameter$
 	if prmcode$ = 12593, tolerance_usinage_3D = rpar(sparameter$, 1)	# Tolérance TOTALE 3D 
 	if prmcode$ = 12553, tolerance_usinage_2D = rpar(sparameter$, 1) 	# Tolérance TOTALE 2D 
 	if prmcode$ = 12053, tolerance_usinage_REEL = rpar(sparameter$, 1) 	# Tolérance REEL USINAGE xx AVEC LE FILTRAGE
+	if prmcode$ = 15136, tolerance_usinage_max_pcent = rpar(sparameter$, 1)	# Tolérance REEL USINAGE xx AVEC LE FILTRAGE % MAX 
 	if prmcode$ = 12628, hs_surf_style = rpar(sparameter$, 1)  	# type d'usinage de surface UGV 
     if prmcode$ = 15163, Val_origine_Z = rpar(sparameter$, 1)   # "valeur de l'origine MC en Z"
     if prmcode$ = 15164, Val_origine_Y = rpar(sparameter$, 1)   # "valeur de l'origine MC en Y"
@@ -8704,8 +8748,8 @@ pmodif_nom_entete   #modif nom au dEbut et fin de l'ISO
 				<text>""</text>
 			</misc_1>
 			<misc_2>
-				<text>En 4 axes utiliser le Z sécu de l'OP : 1</text>
-				<value>1</value>
+				<text>4 axes utilis. Z sécu OP:1=axe A 0=axe B</text>
+				<value>0</value>
 			</misc_2>
 			<misc_3>
 				<text>Val. angulaire index. broche (mortaisage)</text>
@@ -9858,51 +9902,51 @@ pmodif_nom_entete   #modif nom au dEbut et fin de l'ISO
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Inter Exter. Rectangle</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+			<resource>IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>Ref. Inter Exter. Cercle</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+			<resource>IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>Ref. Exter Coin</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN EXTER_1.bmp</resource>
+			<resource>IMAGES PPs\COIN EXTER_1.bmp</resource>
 			</custom_drill_11>
 			<custom_drill_12>
 				<text>Ref. Inter Coin</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN INTER_1.bmp</resource>
+			<resource>IMAGES PPs\COIN INTER_1.bmp</resource>
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>Ref. EN Z</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+			<resource>IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Ref. FACE EN X</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
+			<resource>IMAGES PPs\FACE EN -X-_1.bmp</resource>
 			</custom_drill_14>
 			<custom_drill_15>
 				<text>Ref. FACE EN Y</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Y-_1.bmp</resource>
+			<resource>IMAGES PPs\FACE EN -Y-_1.bmp</resource>
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>Ref. RAINURE LANGUETTE</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\RAINURE_1.bmp</resource>
+			<resource>IMAGES PPs\RAINURE_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Ref. ORIENTATION FACE en Z</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PLAN EN -Z-_1.bmp</resource>
+			<resource>IMAGES PPs\PLAN EN -Z-_1.bmp</resource>
 			</custom_drill_17>
 			<custom_drill_18>
 				<text>Ref. ORIENT. ANGLE FACE en X ou Y</text>
-			<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
+			<resource>IMAGES PPs\FACE EN -X-_1.bmp</resource>
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>
@@ -9946,8 +9990,8 @@ pmodif_nom_entete   #modif nom au dEbut et fin de l'ISO
 				<text>""</text>
 			</misc_1>
 			<misc_2>
-				<text>En 4 axes utiliser le Z sécu de l'OP : 1</text>
-				<value>1</value>
+				<text>4 axes utilis. Z sécu OP:1=axe A 0=axe B</text>
+				<value>0</value>
 			</misc_2>
 			<misc_3>
 				<text>Val. angulaire index. broche (mortaisage)</text>
@@ -11094,51 +11138,51 @@ pmodif_nom_entete   #modif nom au dEbut et fin de l'ISO
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Inter Exter. Rectangle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>Ref. Inter Exter. Cercle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>Ref. Exter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\COIN EXTER_1.bmp</resource>
 			</custom_drill_11>
 			<custom_drill_12>
 				<text>Ref. Inter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN INTER_1.bmp</resource>
+				<resource>IMAGES PPs\COIN INTER_1.bmp</resource>
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>Ref. EN Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Ref. FACE EN X</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -X-_1.bmp</resource>
 			</custom_drill_14>
 			<custom_drill_15>
 				<text>Ref. FACE EN Y</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Y-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -Y-_1.bmp</resource>
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>Ref. RAINURE LANGUETTE</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\RAINURE_1.bmp</resource>
+				<resource>IMAGES PPs\RAINURE_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Ref. ORIENTATION FACE en Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PLAN EN -Z-_1.bmp</resource>
+				<resource>IMAGES PPs\PLAN EN -Z-_1.bmp</resource>
 			</custom_drill_17>
 			<custom_drill_18>
 				<text>Ref. ORIENT. ANGLE FACE en X ou Y</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -X-_1.bmp</resource>
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>

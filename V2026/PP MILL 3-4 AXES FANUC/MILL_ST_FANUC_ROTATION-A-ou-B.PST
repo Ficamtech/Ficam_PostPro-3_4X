@@ -1,5 +1,5 @@
 [POST_VERSION] #DO NOT MOVE OR ALTER THIS LINE# V28.00 P0 E1 W28.00 T1757511906 M28.00 I0 O0
-scustpost_revision    : "26.3009" #:= Revision number for use by Resellers or customers.
+scustpost_revision    : "26.1212" #:= Revision number for use by Resellers or customers.
 # ----------------------------------------
 # - REALISE PAR                 --> FS
 # ---------------------------------------- config PP
@@ -203,6 +203,11 @@ bldnxtool$          = 1     # 0 = n'affiche pas la préparation de l'outil suiva
 type_prep_outil     = 0     # 0 = Pas de prEparation du 1er outil
                             # 1 = PrEparation A chaque outil (ptlchg$)
                             # 2 = PrEparation A chaque outil et A LA FIN (peof)
+							
+							# Si Num Correcteur D <> t$ ou Num Correcteur H <> t$  								
+correcteur_D_plus	= 0		# VALEUR d'AJOUT A "D" -- Num Correcteur D <> t$ --> D=D + (D+)
+correcteur_H_plus	= 0		# VALEUR d'AJOUT A "H" -- Num Correcteur H <> t$ --> H=H + (H+)
+
 # Déchargement de l'outil en broche
 decharge_outil_fin  = 1     # 1 = affiche un "T0 M6" à la fin
 
@@ -212,6 +217,10 @@ fin_programme		= 1		# 1 = M30	2 = M02 	3 = M99
 affiche_G43_H		= 1		# 1 = 1 er Z/outil
 							# 2 = 1 er Z/outil & 1 er Z après rotations ( avec dégagements en G53 )
 							# 0 = SANS --> ex: certaines Hurco
+							
+affiche_D_rot		= 3		# 1 = avec chaque G41 / classique
+							# 2 = uniquement à l'appel d'outil
+							# 3 = Appel d'outil et après ROTATION D'AXE
 
 # RENVOI D'ANGLE
 S_maxi_renvoi_angle = 2000	#
@@ -221,7 +230,7 @@ lire_def_machine    = 1     # 1 = Lire les valeurs de la def machine / armoire -
                             # 0 = suivant les données du PP
 
 Systeme_rot_plans   = 0     # SystEme de gestion des différentes valeurs lors d'une rotation
-                                # 0  = pas de calculs --> origine gEnEralement au centre de la palette
+                                # 0  = pas de calculs --> origine gEnEralement **PAR FACE/G55/G56... ou **au centre de la palette
                                 # 1  = calculs AUTO "G68" --> origine oU on veut
                                 # 2X =	Calcul suivant une transition de l'origine CALCULé
 									# 21 = utilise le sous-programme O8000 pour calculer automatiquement les origines pour chaque face
@@ -271,12 +280,15 @@ Type_UGV            = 3    	# si UGV = 0 --> NON utilisé
 								# 3 = G5.1 Q1/Q0				Hurco: Le paramètre Q_ définit le segment cordal pour la finition, où Q est la valeur d'erreur acceptable
 								# 4 = G5.2 Q0.02 mm /Q0			Hurco: tolérance de Lissage doit être comprise entre 0 à 0,02 mm inclus
 								# 5 = G5.3 P1-100/Q0 			Hurco: est utilisée avec l'option de sélection de surface. P1 donne une surface plus lisse
+								# Mazak (accepte le G09 dans le bloc)
 								# 6 = G5 P2/P0					Mazak Option
 								# 7 = G61.1/G64					Mazak Option	A TESTER
-									# K = coefficient de forme 30=30% de l'avance
+									# K = coefficient de forme 30=30% de l'avance jusqu'au bloc avec le K0
+										# fonction pour usinage des formes dans les coins, idem au "G9" 
 									# P = Contrôle de l'usinage lisse
 									# R = Contrôle de coin lisse
 								# 8 = G61.1/G5 P2 & G5 P0/G64	Mazak Option	A TESTER --> fichier en exemple
+								# 9 = G61/G64					Mazak Option
 								
 CN_textes           = 1     # Autorise les commentaires texte
 
@@ -468,7 +480,7 @@ diviseur        : -1    	# diviseur tourne autour de X=1-->A autour de Y=2-->B /
 
 # ZONE de FORMULES  si : uniquement au dédut si = constante
 no$         	= 0
-yes$        	: 1
+yes$        	= 1
 
 get_1004$   	: 1     # Find gcode 1004 with getnextop?
 cant_tlchng$    : 1  	# Ignorer entrée de texte programmé au changement avec tlchng_aft?
@@ -1128,16 +1140,15 @@ xinc        = xabs
 yinc        = yabs
 zinc        = zabs
 axeA1_depi  = axeA1_dep
-axe_ABi       = axe_AB            # A absolue en substitution
-A_posi      = axeAB_subs      # A incremental en substitution
-zdevi       = zdev            # Z pour continue substitutuion en INCREMENTAL
+axe_ABi     = axe_AB        	# A absolue en substitution
+A_posi      = axeAB_subs    	# A incremental en substitution
+zdevi       = zdev            	# Z pour continue substitutuion en INCREMENTAL
 sub_trnsx$  : -99999
 sub_trnsy$  : -99999
 sub_trnsz$  : -99999
 m7$         : 999
 m8$         : 999
 old_t 		: -9999
-Test_bris_outils = mi6$
 #endregion
 
 #region Buffer
@@ -1496,7 +1507,7 @@ stype_comp  : ""
 fstrsel  stc0 type_comp stype_comp 10 -1
 #-------------------------------------------------------
 #Drill variables
-drlgsel     : -1   #Drill Select Initialize
+drlgsel     : -1    #Drill Select Initialize
 drillref    : 0     #Select drill reference
 peckacel$   : 0     #Fractional percent to reduce peck2 when usecan.. : no
 drlgcode    : 0     #Save Gcode in drill
@@ -2130,16 +2141,17 @@ pcant_out       #Canned text - build the string for output
         #Build the cantext string
         if cantext$ = one, strcantext = strcantext + sm00
         if cantext$ = two, strcantext = strcantext + sm01
-        if cantext$ > four, [                                #-----------LISTE DE TEXTES
-          strtextno = no2str(cantext$)
-          #strcantext = strcantext + strm + strtextno
-          liste_textes = cantext$ #strtextno
-          strcantext = s_liste_textes #LISTE DE TEXTES
-          #strcantext
-          #*cant_pos, "XXXX",
-          if cant_pos = 1, s_liste_textes                                        #AVEC
-          if cant_pos = 0 | cant_pos = 2, n$, s_liste_textes, s_com_close, e$    #AVANT et APRES
-          ]
+        if cantext$ > four,                                #-----------LISTE DE TEXTES
+			[
+			strtextno = no2str(cantext$)
+			#strcantext = strcantext + strm + strtextno
+			liste_textes = cantext$ #strtextno
+			strcantext = s_liste_textes #LISTE DE TEXTES
+			#strcantext
+			#*cant_pos, "XXXX",
+			if cant_pos = 1, s_liste_textes                                        #AVEC
+			if cant_pos = 0 | cant_pos = 2, n$, s_liste_textes, s_com_close, e$    #AVANT et APRES
+			]
         ]
     else, #cant_pos indicates coolant output --> ARROSAGES SI cant_pos > 2
         [
@@ -2147,18 +2159,21 @@ pcant_out       #Canned text - build the string for output
         coolant_bin = flook (two, cantext$) #Create binary value for each coolant using lookup table
         if frac(cantext$/two),  # ARROSAGES **OFF**
             [
-            if all_cool_off, [
+            if all_cool_off, 
+				[
                 if coolant_on, p_bloc_O, n$, sall_cool_off, e$
                 coolant_on = zero
                 ]
-            else, [
+            else, 
+				[
                 #"ici2 ", e$
-                if coolant_on > 0, [
-                      #"ici3 ", e$
-                      coolant_on = coolant_on - coolant_bin/2 #Odd = off command, subtract appropriate binary value.
-                      coolantx = cantext$ - 50                #Create a coolantx value for string select
-                      p_bloc_O, n$, *scoolantx, e$
-                      ]
+                if coolant_on > 0, 
+					[
+					#"ici3 ", e$
+					coolant_on = coolant_on - coolant_bin/2 #Odd = off command, subtract appropriate binary value.
+					coolantx = cantext$ - 50                #Create a coolantx value for string select
+					p_bloc_O, n$, *scoolantx, e$
+					]
                 ]
             ]
         else, [                    # ARROSAGES **ON**         #Even = on command
@@ -2166,13 +2181,15 @@ pcant_out       #Canned text - build the string for output
             local_int = zero
             coolantx = zero
             suppress = zero
-            while local_int < 20 & coolant_on > 0, [
+            while local_int < 20 & coolant_on > 0, 
+				[
                 result2 = and(2^local_int, coolant_on)
                 local_int = local_int + one
                 if result2 = coolant_bin, suppress = one
                 ]
-            if suppress <> 1, [ #Don't output an on code for a coolant that is already on
-                if Mode_reglage_PP = 0, "cantext 2: ", *cantext$, e$
+            if suppress <> 1,  #Don't output an on code for a coolant that is already on
+                [
+				if Mode_reglage_PP = 0, "cantext 2: ", *cantext$, e$
                 #"ici4 ", e$
                 coolant_on = coolant_on + coolant_bin     #Maintain binary sum of all coolants currently on
                 coolantx = cantext$ - 50                  #Create a coolantx value for string select
@@ -2732,6 +2749,7 @@ p_rot_tlchg0   # affichage de l'angle au changement d'outil nul pour positionné
         if Mode_reglage_PP = 0, n$, "--> p_rot_tlchg0 ", "old:", *old_axe_AB, "axe:", *axe_AB, "epsi:", *epsi, *useaxe, e$
 		if epsi <> 0,    [                                  	# si ca tourne
             rot_tlchg_zero = 1
+			if affiche_D_rot = 3, old_correcteur_D = -1
             xabs = x$                                       	# reprendre les positions xyz avant le dégagement
             yabs = y$
             zabs = z$
@@ -3350,7 +3368,10 @@ pfr     # avance sur contour
 	        ]
 	    if F_variables = 1 & tool_op$ = 102 & fr$ <> -1 & (mi4$ = 0), fr$ = 101, frQ = fr$, *frQ	# surfaçage
 	    if fr_pos$ >= 0 & (nextop$ = 11 | mi4$ <> 0), fr_pos$  					# pas de F= -- OP 5 AXES
-	    if F_variables = 0 & fr_pos$ <> -1, fr_pos$                				# pas de F=	  			
+	    if F_variables = 0 & fr_pos$ <> -1, [									# pas de F=	
+			if debut_out = 1, *fr_pos$ 											# force apres l'appel de l'outil              				
+			fr_pos$
+			]  			
 	    debut_out = 0
 		]   
     p_erreur_avanceS    
@@ -3508,10 +3529,11 @@ pavanceperce    # Avance en percage
 #   Gestion de la correction outil et du numéro de correcteur
 pcorh       # Correction de longueur
     correcteur_H = tlngno$
+	if correcteur_H_plus > 0, correcteur_H = correcteur_H + correcteur_H_plus
     if outils_param = 0 & correcteur_H <> old_correcteur_H, [    # sans les parametres
         sg43, "H", *correcteur_H
         ]
-    if outils_param = 1 & correcteur_H <> old_correcteur_H, [     # avec les parametres
+    if outils_param = 1 & correcteur_H <> old_correcteur_H, [    # avec les parametres
         correcteur_H_param = correcteur_H
         correcteur_H_param = correcteur_H_param + 500
         sg43, "H", no_spc$, 35, *correcteur_H_param
@@ -3888,15 +3910,15 @@ pstagetool      #Pre-stage tools    # en plus pour afficher le NOM DE L'OUTIL SU
 
 p_info_outils
     strtool$ = ucase(strtool$)
-    if Type_infos_outil    = 1, n$, s_com_open, strtool$, s_com_close, e$
-    if Type_infos_outil    = 2, n$, s_com_open, ptype, *smatT, *paramT5, ptypeBoutT, pangleT, phauteurT, ppas, parrosage, s_com_close, e$
-    if Type_infos_outil    = 3, n$, s_com_open, ptype, *smatT, *paramT5, ptypeBoutT, pangleT, phauteurT, ppas, parrosage, s_com_close, e$
-    if Type_infos_outil    = 4, n$, s_com_open, strtool$, *smatT, *paramT5, ptypeBoutT, pangleT, phauteurT, ppas, parrosage, s_com_close, e$
+    if Type_infos_outil = 1, n$, s_com_open, strtool$, s_com_close, e$
+    if Type_infos_outil = 2, n$, s_com_open, ptype, *smatT, *paramT5, ptypeBoutT, pangleT, phauteurT, ppas, parrosage, s_com_close, e$
+    if Type_infos_outil = 3, n$, s_com_open, ptype, *smatT, *paramT5, ptypeBoutT, pangleT, phauteurT, ppas, parrosage, s_com_close, e$
+    if Type_infos_outil = 4, n$, s_com_open, strtool$, *smatT, *paramT5, ptypeBoutT, pangleT, phauteurT, ppas, parrosage, s_com_close, e$
 
 p_affiche_outil    # ecriture de l'appel outil pour psof et ptlchg4	
     num = num + 1                                                           # Nom du groupe d'operation
     P_f_val_origine_depart_idem
-    p_erreur_dif_T_H_D
+    #p_erreur_dif_T_H_D
     perreur_pas_fil
     if tool_typ$ = 5, ss$ = (abs(ss$))*-1                               # si taraud à gauche inverser le sens de broche
     ssa = abs(ss$)
@@ -4165,7 +4187,7 @@ p_placement_apres_chang_outil           # AFFICHAGE DES MOUVEMENTS MACHINE
 ptlchg0$     # CHANGEMENT D'OUTIL NUL
     Perreur_nom_RUD
     perreur_pas_fil
-    p_erreur_dif_T_H_D
+    #p_erreur_dif_T_H_D
     memo_incremental = incremental                  # memo du mode ABS INC actuel
     incremental = 0                                 # pour forcer le mode Absolue
     @rotaxis$, @old_rotaxis                         # mise a jour
@@ -4197,7 +4219,8 @@ ptlchg0$     # CHANGEMENT D'OUTIL NUL
     if CN_textes <> 0, param_comp                   # afficher le type de compensation
     if CN_textes <> 0, param_surep                  # afficher les surepaisseurs
     if tool_typ$ = 5, ss$ = (abs(ss$))*-1           # si taraud à gauche inverser le sens de broche
-    if ss$ <> old_ssa, ssa = ss$, n$, *ssa, pgamme, *spdlon, e$     # si changement de vitesse de broche l'afficher
+    ssa = abs(ss$)
+	if ssa <> old_ssa, n$, *ssa, pgamme, *spdlon, e$     # si changement de vitesse de broche l'afficher
     if ra_type$ = 1 & ra_block$ >0, [				# Renvoi d'ANGLE
 		Angle_PLAN_MC_renvoie_angle = atan2(-m8$,-m7$)
 		if Angle_PLAN_MC_renvoie_angle <> old_Angle_PLAN_MC_renvoie_angle, [
@@ -4266,6 +4289,7 @@ pspindle        #Spindle speed calculations for RPM
 
 pspindchng      #Spindle speed change
     if prv_spdlsel <> spdlsel & old_ssa <> zero, p_bloc_O, n$, *sm_01, e$
+	ssa = abs(ss$)	# en négatif suite op de transformation ?? --> positif
     if old_ssa <> ssa | prv_spdlsel <> spdlsel, [
         if ssa <> 0, [
              n$, ssa, e$
@@ -4279,13 +4303,16 @@ pspindchng      #Spindle speed change
 ptoolend$        #End of tool path, before reading new tool data
     !ssa, !spdlsel
     Test_bris_outils = mi6$
+	type_test_bris_outils = mi5$
+	old_Test_bris_outils = Test_bris_outils
+	old_type_test_bris_outils = type_test_bris_outils
 
 ptlchg$      # CHANGEMENT D'OUTIL
     increment_op_outil = 1
     p_lubrif_OFF
     pas = 0
 	if s_reset_AB <> svide, n$, s_reset_AB, e$
-    if Test_bris_outils = 1, p_test_bris_outil
+    if old_Test_bris_outils = 1, p_test_bris_outil
     p_ugv_off
     if decalage = 1 | sauve_ra_block_ >0, [     # Annulation du décallage FIN du renvoie d'angle
         p_annule_decalage                       # annuler les decalages d'origine
@@ -4397,12 +4424,14 @@ peof$
         p_annule_decalage                       # annuler les decalages d'origine
         sauve_ra_block_ = -1
         ]
-    if Test_bris_outils = 1, p_test_bris_outil
+    old_Test_bris_outils = mi6$
+	old_type_test_bris_outils = mi5$
+	if old_Test_bris_outils = 1, p_test_bris_outil
     gcode$ = 0                              # Force le gcode a 0 pour faire un G0 apres
     incremental = 2                         # pour re forcer l'affichage du mode Absolue
     !incremental
     incremental = 0                         # pour forcer le mode Absolue
-    if (old_tox4 <> 0 ) | (old_toy4 <> 0) | (old_toz4 <> 0), n$, "G52X0Y0Z0", e$
+    if (old_tox4 <> 0 ) | (old_toy4 <> 0) | (old_toz4 <> 0), n$, "G52 X0 Y0 Z0", e$
     p_degage_fin                            # Dégagement de la machine fin de prog
     if bldnxtool$ = 1 & type_prep_outil = 2,    [
         if nom_outil = 1, [                             	# Tool call uses tool name
@@ -4501,14 +4530,12 @@ ptool_insp      # inspection des plaquettes/outil
 #endregion
 
 #region test_bris_outil
-sbris_outil  : "CALL PGM TNC:\USINAGE\L_BREAK_TEST.H"   # macro appel de sous programme pour test bris_outil
-sbris_outil1 : "CALL PGM TNC:\dmg\BRIS-FORET.H"            # macro appel de sous programme pour test bris_outil
-sbris_outil2 : "CALL PGM TNC:\dmg\BRIS-FRAISE.H"        # macro appel de sous programme pour test bris_outil
-
+fmt 4 old_Test_bris_outils
+fmt 4 old_type_test_bris_outils
 p_test_bris_outil                    # controle bris outil
-    type_test_bris_outils = mi5$
-    Test_bris_outils = mi6$
-    if type_test_bris_outils <> 0,     [
+	Test_bris_outils = old_Test_bris_outils 
+	type_test_bris_outils = old_type_test_bris_outils
+	if type_test_bris_outils <> 0,     [
         p_erreur_test_bris_out_nom
         if type_test_bris_outils = 1,    [
             n$, "(CYCLE DE TEST BRIS OUTIL)", e$
@@ -4526,15 +4553,17 @@ p_test_bris_outil                    # controle bris outil
             if outils_param = 1 & nom_outil = 0, n$, "G65P9023A24.T", no_spc$, 35, *outil_param, "H0.3", e$
             ]
         if type_test_bris_outils = 2,    [
-            "CYCLE NUM. 2 DE BRIS D OUTIL A DEFINIR",e$
-            n$, ";TEST BRIS OUTIL FRAISE", e$
+            n$, "( CYCLE NUM. 2 DE BRIS D OUTIL A DEFINIR )", e$
+            n$, "( TEST BRIS OUTIL FRAISE )", e$
             #n$, sbris_outil2, e$
             ]
         if type_test_bris_outils = 3,    [
-            "CYCLE NUM. 3 DE BRIS D OUTIL A DEFINIR",e$
+            n$, "( CYCLE BRIS OUTIL - MACRO MAZAK )", e$
+			n$, "M98 <M35>", e$
             ]
         type_test_bris_outils = 0
         Test_bris_outils = 0
+		old_Test_bris_outils = Test_bris_outils
         ]
 #endregion
 
@@ -4667,12 +4696,12 @@ pijk        # ecriture des IJK pour G90 G91
         jinc = j$
         kinc = k$
         ]
-    if incremental = 0 & plane$ = 0 , *iabs, *jabs, !iinc, !jinc, !kinc
-    if incremental = 0 & plane$ = 2 , *iabs, *kabs, !iinc, !jinc, !kinc
-    if incremental = 0 & plane$ = 1 , *jabs, *kabs, !iinc, !jinc, !kinc
-    if incremental = 1 & plane$ = 0 , !iabs, !jabs, *iinc, *jinc, !kinc
-    if incremental = 1 & plane$ = 2 , !iabs, !kabs, *iinc, !jinc, *kinc
-    if incremental = 1 & plane$ = 1 , !jabs, !kabs, !iinc, *jinc, *kinc
+    if incremental = 0 & plane$ = 0, *iabs, *jabs, !iinc, !jinc, !kinc
+    if incremental = 0 & plane$ = 2, *iabs, *kabs, !iinc, !jinc, !kinc
+    if incremental = 0 & plane$ = 1, *jabs, *kabs, !iinc, !jinc, !kinc
+    if incremental = 1 & plane$ = 0, !iabs, !jabs, *iinc, *jinc, !kinc
+    if incremental = 1 & plane$ = 2, !iabs, !kabs, *iinc, !jinc, *kinc
+    if incremental = 1 & plane$ = 1, !jabs, !kabs, !iinc, *jinc, *kinc
 
 #   Gestion de la correction outil et du numéro de correcteur
 pcorr
@@ -4687,20 +4716,21 @@ pcorrecteur_D
     correcteur_D = tloffno$     # + nbr_outil
 	#if type_comp = 5 | type_comp = 6, correcteur_D = correcteur_D + 100 	# AJOUT DE 100 UNIQUEMENT POUR L'**USURE** (cohabitation du mode "armoire et usure")
     perreur_D
-    if outils_param = 0,    [
+    if correcteur_D_plus > 0, correcteur_D = correcteur_D + correcteur_D_plus
+	if outils_param = 0,    [
         # UNIQUEMENT AU 1ER G41/G42
-		#if correcteur_D <> old_correcteur_D, *correcteur_D
-        #old_correcteur_D = correcteur_D
-		#
+		if affiche_D_rot = 2 | affiche_D_rot = 3, [
+			if correcteur_D <> old_correcteur_D, *correcteur_D
+	        old_correcteur_D = correcteur_D
+			]
 		# A chaque G41/G42
-		*correcteur_D
+		if affiche_D_rot = 1, *correcteur_D
 		#
         ]
     if outils_param = 1,    [
         correcteur_D_param = correcteur_D
         correcteur_D_param = correcteur_D_param +500
-        p_erreur_dif_T_H_D
-        #if correcteur_D_param <> old_correcteur_D_param, "D", no_spc$, 35, correcteur_D_param
+        #p_erreur_dif_T_H_D
         if correcteur_D_param <> old_correcteur_D_param, "D", no_spc$, 35, correcteur_D_param
         old_correcteur_D_param = correcteur_D_param
         ]
@@ -4906,7 +4936,7 @@ serreurPalp3                : "ATTENTION SENS DE PALPAGE Y ERRONE" # op_id$," AV
 serreur_Aff_ORI             : "ATTENTION INFORMER LES VALEURS D ORIGINE ET RELANCER LE PST"
 s_avert_taraud_brise_c      : "ATTENTION AVERTISSEMENT : TARAUDAGE AVEC BRISE COPEAUX"
 serreur_av_taraudage        : "ATTENTION LE PAS A UNE VALEUR DECIMAL"
-serreur_H_et_D              : "ATTENTION RENUMEROTER TOUT -outil et H/D DIFFERENTS"
+serreur_H_et_D              : "ATTENTION RENUMEROTER LES OUTILS, H/D DIFFERENTS"
 serreur_vit_broche          : "ATTENTION -BROCHE SANS VITESSE-"
 serreurPalp4_1              : "ATTENTION IL MANQUE UNE LONGUEUR DE PALPAGE ORIGINE X/Y 2 FACES"
 serreurPalp4_2              : "ATTENTION IL MANQUE LE TYPE DE PALPAGE ORIGINE X/Y 2 FACES"
@@ -4917,9 +4947,9 @@ s_erreur_pas_fil            : "ATTENTION RENSEIGNER LE PAS DU FILETAGE à la fra
 #s_mess_per_prof2           : "ATTENTION METTRE -F- A LA BONNE VALEUR SUR LE FORET TRES LONG."
 #s_mess_per_prof3           : "ATTENTION -S- DE DEPART > 500 Tr/mn A MODIFIER DANS L'ISO !"
 s_erreur_pas_fil2           : "ATTENTION l'outil et l'opération non pas le meme PAS !"
-s_erreur_transf_plan         : "ATTENTION transformation PLAN à plat ! Rotation sur Z !"
+s_erreur_transf_plan        : "ATTENTION transformation PLAN à plat ! Rotation sur Z !"
 s_erreur_origine_plan2      : "- POUR INFO - il peut Etre utilisE avec plusieurs piEces"
-s_erreur_dif_T_H_D          : "ATTENTION num. d'outil est different du num -H- ou -D- !"
+s_erreur_dif_T_H_D          : "ATTENTION le num. d'outil est different du num -H- ou -D- !"
 s_erreur_avance_fil         : "ATTENTION l'avance de filetage à la fraise est TROP importante !"
 s_erreur_avanceS            : "ATTENTION **INFORMER LA VALEUR DE --F-- DANS L OUTIL***"
 s_erreur_choix_axe          : "ATTENTION **CE POST-PROCESSEUR N'EST PAS PREVU POUR CETTE ROTATION D'AXE !"
@@ -5033,22 +5063,23 @@ perreur_PAS_Taraud  #"Erreur - ATTENTION LE PAS A UNE VALEUR DECIMAL"
         exitpost$
         ]
 
-perreur_H   #"ATTENTION RENUMEROTER TOUT -outil et H/D DIFFERENTS"
-    if paramT1 <> tlngno$, [
+perreur_H   #"ATTENTION RENUMEROTER LES OUTILS, H/D DIFFERENTS"
+    if paramT1 <> tlngno$ & correcteur_H_plus = 0, [
         p_erreur_messages
        "ERREUR NUM: 12", s_erreur_message_0, e$
-       "T", paramT1, "H", *correcteur_H, e$
-        result = mprint(serreur_H_et_D)
+       "T", paramT1, "H--->", *correcteur_H, e$
+	   "SI BESOINS MODIFIER les variables : correcteur_D_plus ou correcteur_H_plus", e$
+        result = mprint(s_erreur_dif_T_H_D)
         exitpost$
         ]
 
 perreur_D   #"ATTENTION RENUMEROTER TOUT -outil et H/D DIFFERENTS"
-    if paramT1 <> tloffno$, [
+	if paramT1 <> tloffno$ & correcteur_D_plus = 0, [
         p_erreur_messages
         "ERREUR NUM: 13", s_erreur_message_0, e$
-        "T", paramT1, "D", *correcteur_D, e$
+        "T", paramT1, "D--->", *correcteur_D, e$
         "ATTENTION ERREUR 13 OP: ", op_id$, " AVEC OUTIL ", *t$, e$
-        result = mprint(serreur_H_et_D)
+        result = mprint(s_erreur_dif_T_H_D)
         exitpost$
         ]
 
@@ -5084,17 +5115,17 @@ perreur_pas_fil  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE à la fraise"
         [
         if pas_filetage = 9.999, [  # "ATTENTION RENSEIGNER LE PAS DU FILETAGE à la fraise"
             p_erreur_messages
-            "ERREUR NUM: 17", s_erreur_message_0, e$
+            #"ERREUR NUM: 17", s_erreur_message_0, e$
             result = mprint(s_erreur_pas_fil)
-            exitpost$
+            #exitpost$
             ]
         if pas_filetage <> paramT7, [   # ""ATTENTION l'outil et l'opération non pas le meme PAS !""
             p_erreur_messages
-            "ERREUR NUM: 18", s_erreur_message_0, e$
+            #"ERREUR NUM: 18", s_erreur_message_0, e$
             result = mprint(s_erreur_pas_fil2)
-            exitpost$
+            #exitpost$
             ]
-        p_erreur_avance_fil
+        #p_erreur_avance_fil
         ]
 
 p_erreur_dif_T_H_D # "ATTENTION num. d'outil est different du num -H- ou -D- !"
@@ -6885,8 +6916,8 @@ preadbuf5   # Read Buffer 1
 				<text>""</text>
 			</misc_1>
 			<misc_2>				
-				<text>En 4 axes utiliser le Z sécu de l'OP : 1</text>
-				<value>1</value>
+				<text>4 axes utilis. Z sécu OP:1=axe A 0=axe B</text>
+				<value>0</value>
 			</misc_2>
 			<misc_3>
 				<text>Val. angulaire index. broche (mortaisage)</text>
@@ -6919,7 +6950,7 @@ preadbuf5   # Read Buffer 1
 			<misc_1>
 				<text>test</text>
 				<inch_value>0</inch_value>
-				<metric_value>-419.5</metric_value>
+				<metric_value>0</metric_value>
 			</misc_1>
 			<misc_2>
 				<text>""</text>
@@ -7989,11 +8020,11 @@ preadbuf5   # Read Buffer 1
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Inter Exter. Rectangle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>Réf. Inter Exter. Cercle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>""</text>
@@ -8003,34 +8034,34 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>Réf. FACE EN Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Réf. FACE EN X</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -X-_1.bmp</resource>
 			</custom_drill_14>
 			<custom_drill_15>
 				<text>Réf. FACE EN Y</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Y-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -Y-_1.bmp</resource>
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>Réf. EN X IN-OUT</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\ENTRE 2 FACES_X_1.bmp</resource>
+				<resource>IMAGES PPs\ENTRE 2 FACES_X_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Réf. EN Y IN-OUT</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\ENTRE 2 FACES_Y_1.bmp</resource>
+				<resource>IMAGES PPs\ENTRE 2 FACES_Y_1.bmp</resource>
 			</custom_drill_17>
 			<custom_drill_18>
 				<text>Cycle 18</text>
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>
@@ -8077,8 +8108,8 @@ preadbuf5   # Read Buffer 1
 				<text>""</text>
 			</misc_1>
 			<misc_2>
-				<text>En 4 axes utiliser le Z sécu de l'OP : 1</text>
-				<value>1</value>
+				<text>4 axes utilis. Z sécu OP:1=axe A 0=axe B</text>
+				<value>0</value>
 			</misc_2>
 			<misc_3>
 				<text>Val. angulaire index. broche (mortaisage)</text>
@@ -9162,11 +9193,11 @@ preadbuf5   # Read Buffer 1
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Inter Exter. Rectangle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>Réf. Inter Exter. Cercle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+				<resource>IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>""</text>
@@ -9176,34 +9207,34 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>Réf. FACE EN Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Réf. FACE EN X</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -X-_1.bmp</resource>
 			</custom_drill_14>
 			<custom_drill_15>
 				<text>Réf. FACE EN Y</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Y-_1.bmp</resource>
+				<resource>IMAGES PPs\FACE EN -Y-_1.bmp</resource>
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>Réf. EN X IN-OUT</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\ENTRE 2 FACES_X_1.bmp</resource>
+				<resource>IMAGES PPs\ENTRE 2 FACES_X_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Réf. EN Y IN-OUT</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\ENTRE 2 FACES_Y_1.bmp</resource>
+				<resource>IMAGES PPs\ENTRE 2 FACES_Y_1.bmp</resource>
 			</custom_drill_17>
 			<custom_drill_18>
 				<text>Cycle 18</text>
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>
