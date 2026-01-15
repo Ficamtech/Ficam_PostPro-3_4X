@@ -309,7 +309,7 @@ type_cycle_percages		: 2		# type de cycles de percage
 prof_cycle_Abs_Relatif	: 1		# 1 = Z en Absolu  --> DP
 								# 2 = Z en Relatif --> DPR
 																													
-Type_lissage 			= 11    # CYCLE832 & MODE PRISMATIQUE
+Type_lissage 			= 3    # CYCLE832 & MODE PRISMATIQUE
 								# 1 = CYCLE832 ON avec prise en compte de la TOLERANCE de l'opération MASTERCAM ....mr10$/OK
 										# EBAUCHE tol >= 0.05 		_ROUGH
 										# DEMI-FINITION tol < 0.05	_SEMIFIN
@@ -501,7 +501,7 @@ s_reset_AB			: "M31 (REMISE A ZERO AXE A-B)"		# HURCO M31
 
 [STARTBIN]
 #property of FICAM, Eric Dauvilliers, e.dauvilliers@ficam.com, +33 (0)2 37 26 28 10
-scustpost_revision    : "25.2006" #:= Revision number for use by Resellers or customers.
+scustpost_revision    : "25.3009" #:= Revision number for use by Resellers or customers.
 
 #aide PPs
 #if prmcode$ = 20005, perc_prof = rpar(sparameter$, 1)  #affecte la valeur de la ligne NCI 20005 - colonne 1 A  la variable "perc_prof"
@@ -790,7 +790,7 @@ fmt    		8 RFF        # Avance retraction alesoir
 fmt         13 depth$
 fmt         13 refht$
 fmt          2 dwell$
-fmt  "P" 	 2 dwell_     	# Tempo pour percage PROFOND pst
+fmt  "P" 	 2 dwell     	# Tempo pour percage PROFOND pst
 fmt         13 initht$
 fmt         13 peckclr$
 fmt         13 peck1$
@@ -3977,7 +3977,7 @@ pdwl_spd$        #Call from NCI gcode 4	*** ROTATION BROCHE / TEMPO / ARROSAGES
 	comment$
 	pspindchng	
 	pcan
-	if fmtrnd(dwell$), dwell_ = dwell$, pcan1, p_bloc_O, n$, *dwell_, e$
+	if fmtrnd(dwell$), dwell = dwell$, pcan1, p_bloc_O, n$, *sg04, *dwell, e$ 
 	else, pcan1, p_bloc_O, #n$, strcantext, e$
 	pcan2
 	
@@ -4025,7 +4025,7 @@ plin$        # Ligne travail
 	gcode$ = 1
 	if cc$ = 41 | cc$ = 42, n$, pcorrecteur_D, sgcode, sinc_abs, pxyz, pfr, p_lubrif_ON, strcantext, e$	
 	else, n$, pcorrecteur_D, sgcode, sinc_abs, pxyz, pfr, p_lubrif_ON, strcantext, e$	
-	if drillcyc$ >= 0 & dwell$ > 0 & (usecanDRILL = 1 | usecanPECK = 1 | usecanCHIP = 1), n$, *sg04, *dwell_, e$
+	if drillcyc$ >= 0 & dwell$ > 0 & (usecanDRILL = 1 | usecanPECK = 1 | usecanCHIP = 1), n$, *sg04, *dwell, e$
 	prvz = z$
 	if rpd_typ$ = 7, ptool_insp      # inspection des plaquettes/outil
 	
@@ -6096,7 +6096,7 @@ p_percages_decomposes
 		if drillcyc$ = 1, n$, s_com_open, "PERCAGE DEBOURRAGE -G83-", s_com_close, e$
 		if drillcyc$ = 2, n$, s_com_open, "PERCAGE DEBOURRAGE BRISE COPEAUX -G83-", s_com_close, e$ 
 		#if drillcyc$ = 3, n$, s_com_open, "TARAUDAGE G84", s_com_close, e$ 
-		dwell_ = dwell$ 
+		dwell = dwell$ 
 		passage_drillcyc = 1
 		]	
 	if drillcyc$ >= 0 & (usecanDRILL = 1 | usecanPECK = 1 | usecanCHIP = 1) & perc_1er_perc_pour_C_ou_mm >= 0 & perc_Val_pour_Cent_mm <> 0, 
@@ -6121,7 +6121,7 @@ p_percages_decomposes
 			P_er_perc_2 = refht$ - P_er_perc_1					
 			]
 		n$, "G1", *P_er_perc_2, *avance, e$
-		if dwell$ > 0, n$, *sg04, *dwell_, e$ 
+		if dwell$ > 0, n$, *sg04, *dwell, e$ 
 		p_erreur_perc_decomposes
 		perc_1er_perc_pour_C_ou_mm = -1	# pour ne pas l'afficher sur les autres profondeurs
 		]
@@ -7855,7 +7855,7 @@ s_too_lop_219 : "Steadyrest operation"
 s_too_lop_220 : "Pinch-turn operation"
 s_too_lop_221 : "Custom operation with tool" 
 s_too_lop_222 : "Custom operation without tool" 
-s_too_lop_223 : "Custom operation reference"
+s_too_lop_223 : "PERCAGE AVANCE"
 s_too_lop_224 : "Plunge turn (chained geometry)"
 s_too_lop_225 : "Plunge turn (point geometry)"
 s_too_lop_226 : "Turret park operation"

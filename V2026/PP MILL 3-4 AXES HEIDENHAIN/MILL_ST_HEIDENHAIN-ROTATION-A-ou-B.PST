@@ -1,6 +1,5 @@
-[POST_VERSION] #DO NOT MOVE OR ALTER THIS LINE# V27.00 P0 E1 W27.00 T1722257585 M27.00 I0 O0
+[POST_VERSION] #DO NOT MOVE OR ALTER THIS LINE# V28.00 P0 E1 W28.00 T1757511906 M28.00 I0 O0
 # ----------------------------------------
-# depot
 # - REALISE PAR                	--> FS
 # ---------------------------------------- config PP
 # - TYPE PP                 	--> FRAISAGE
@@ -417,7 +416,7 @@ s_rot_plus_court_OFF: "M127 ; Rotation au plus court OFF"
 
 [STARTBIN]
 #property of FICAM, Eric Dauvilliers, e.dauvilliers@ficam.com, +33 (0)2 37 26 28 10
-scustpost_revision    : "25.3107" #:= Revision number for use by Resellers or customers.
+scustpost_revision    : "26.3009" #:= Revision number for use by Resellers or customers.
 
 #aide PPs
 #if prmcode$ = 20005, perc_prof = rpar(sparameter$, 1)  #affecte la valeur de la ligne NCI 20005 - colonne 1 A  la variable "perc_prof"
@@ -6147,7 +6146,7 @@ s_too_lop_219 : "Steadyrest operation"
 s_too_lop_220 : "Pinch-turn operation"
 s_too_lop_221 : "Custom operation with tool" 
 s_too_lop_222 : "Custom operation without tool" 
-s_too_lop_223 : "Custom operation reference"
+s_too_lop_223 : "PERCAGE AVANCE"
 s_too_lop_224 : "Plunge turn (chained geometry)"
 s_too_lop_225 : "Plunge turn (point geometry)"
 s_too_lop_226 : "Turret park operation"
@@ -7697,23 +7696,23 @@ preadbuf5   # Read Buffer 1
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Int. Exter. Rectangle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>REf. Int. Exter. Cercle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>REf. Exter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\COIN EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN EXTER_1.bmp</resource>
 			</custom_drill_11>
 			<custom_drill_12>
 				<text>REf. Inter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\COIN INTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN INTER_1.bmp</resource>
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>REf. en Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Cycle 14</text>
@@ -7723,7 +7722,7 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>REf. larg. rainure</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\RAINURE_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\RAINURE_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Cycle 17</text>
@@ -7733,11 +7732,11 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>
@@ -8835,23 +8834,23 @@ preadbuf5   # Read Buffer 1
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Int. Exter. Rectangle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>REf. Int. Exter. Cercle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>REf. Exter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\COIN EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN EXTER_1.bmp</resource>
 			</custom_drill_11>
 			<custom_drill_12>
 				<text>REf. Inter Coin</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\COIN INTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\COIN INTER_1.bmp</resource>
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>REf. en Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Cycle 14</text>
@@ -8861,7 +8860,7 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>REf. larg. rainure</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\RAINURE_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\RAINURE_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Cycle 17</text>
@@ -8871,11 +8870,11 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>

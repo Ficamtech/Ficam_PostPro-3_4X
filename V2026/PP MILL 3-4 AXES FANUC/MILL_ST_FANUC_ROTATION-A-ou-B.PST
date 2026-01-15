@@ -1,7 +1,6 @@
-[POST_VERSION] #DO NOT MOVE OR ALTER THIS LINE# V27.00 P0 E1 W27.00 T1722257585 M27.00 I0 O0
-scustpost_revision    : "25.2407" #:= Revision number for use by Resellers or customers.
+[POST_VERSION] #DO NOT MOVE OR ALTER THIS LINE# V28.00 P0 E1 W28.00 T1757511906 M28.00 I0 O0
+scustpost_revision    : "26.3009" #:= Revision number for use by Resellers or customers.
 # ----------------------------------------
-# premier depot
 # - REALISE PAR                 --> FS
 # ---------------------------------------- config PP
 # - TYPE PP                     --> FRAISAGE
@@ -710,7 +709,6 @@ fmt         1 initht$       # Plan de sécu percage pst
 fmt         1 frplunge$     # Avance percage pst
 fmt         1 dwell$        # Tempo pour percage pst
 fmt      	3 dwell       	# Tempo pour percage PROFOND pst
-fmt  "P"    3 dwell_       	# Tempo pour percage PROFOND pst
 fmt  "D"    3 peckclr$     	# garde d'approche rapide dans les débourrage pst
 fmt  "Q"    3 peck1$        # Pas Z du premier débourrage pst
 fmt  "Q"    3 peck2$        # Pas Z des débourrages suivants
@@ -4552,7 +4550,7 @@ pdwl_spd$        #Call from NCI gcode 4    *** ROTATION BROCHE / TEMPO / ARROSAG
     comment$
     pspindchng
     pcan
-    if fmtrnd(dwell$), dwell_ = dwell$, pcan1, p_bloc_O, n$, *dwell_, e$
+    if fmtrnd(dwell$), dwell = dwell$, pcan1, p_bloc_O, n$, s_tempo, *dwell, e$ 
     else, pcan1, p_bloc_O, #n$, strcantext, e$
     pcan2
 
@@ -4600,7 +4598,7 @@ plin$        # Ligne travail
 	p_percages_decomposes	
     if cc$ = 41 | cc$ = 42, n$, *sgcode, sinc_abs, pcorr, pxyz, pcorrecteur_D, pfr, p_lubrif_ON, strcantext, e$
     else, n$,  sgcode, sinc_abs, pcorr, pxyz, pfr, p_lubrif_ON, strcantext, e$
-	if drillcyc$ >= 0 & dwell$ > 0 & (usecanDRILL = 1 | usecanPECK = 1 | usecanCHIP = 1), n$, *dwell_, e$
+	if drillcyc$ >= 0 & dwell$ > 0 & (usecanDRILL = 1 | usecanPECK = 1 | usecanCHIP = 1), n$, s_tempo, *dwell, e$ 
     if rpd_typ$ = 7, ptool_insp     # inspection des plaquettes/outil
 
 pz$      	# z en avance TRAVAIL
@@ -5231,7 +5229,7 @@ p_percages_decomposes
 		if drillcyc$ = 1, n$, s_com_open, "PERCAGE DEBOURRAGE -G83-", s_com_close, e$
 		if drillcyc$ = 2, n$, s_com_open, "PERCAGE DEBOURRAGE BRISE COPEAUX -G83-", s_com_close, e$ 
 		#if drillcyc$ = 3, n$, s_com_open, "TARAUDAGE G84", s_com_close, e$ 
-		dwell_ = dwell$ 
+		dwell = dwell$ 
 		passage_drillcyc = 1
 		]	
 	if drillcyc$ >= 0 & (usecanDRILL = 1 | usecanPECK = 1 | usecanCHIP = 1) & perc_1er_perc_pour_C_ou_mm >= 0 & perc_Val_pour_Cent_mm <> 0,  
@@ -5256,7 +5254,7 @@ p_percages_decomposes
 			P_er_perc_2 = refht$ - P_er_perc_1					
 			]
 		n$, "G1", *P_er_perc_2, *avance, e$
-		if dwell$ > 0, *dwell_, e$ 
+		if dwell$ > 0, n$, s_tempo, *dwell, e$ 
 		p_erreur_perc_decomposes
 		perc_1er_perc_pour_C_ou_mm = -1	# pour ne pas l'afficher sur les autres profondeurs
 		]
@@ -6301,7 +6299,7 @@ s_too_lop_219 : "Steadyrest operation"
 s_too_lop_220 : "Pinch-turn operation"
 s_too_lop_221 : "Custom operation with tool" 
 s_too_lop_222 : "Custom operation without tool" 
-s_too_lop_223 : "Custom operation reference"
+s_too_lop_223 : "PERCAGE AVANCE"
 s_too_lop_224 : "Plunge turn (chained geometry)"
 s_too_lop_225 : "Plunge turn (point geometry)"
 s_too_lop_226 : "Turret park operation"
@@ -7991,11 +7989,11 @@ preadbuf5   # Read Buffer 1
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Inter Exter. Rectangle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>Réf. Inter Exter. Cercle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>""</text>
@@ -8005,34 +8003,34 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>Réf. FACE EN Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Réf. FACE EN X</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
 			</custom_drill_14>
 			<custom_drill_15>
 				<text>Réf. FACE EN Y</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\FACE EN -Y-_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Y-_1.bmp</resource>
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>Réf. EN X IN-OUT</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\ENTRE 2 FACES_X_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\ENTRE 2 FACES_X_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Réf. EN Y IN-OUT</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\ENTRE 2 FACES_Y_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\ENTRE 2 FACES_Y_1.bmp</resource>
 			</custom_drill_17>
 			<custom_drill_18>
 				<text>Cycle 18</text>
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>
@@ -9164,11 +9162,11 @@ preadbuf5   # Read Buffer 1
 			</misc_drill_2>
 			<custom_drill_9>
 				<text>Ref. Inter Exter. Rectangle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Poche rectangul INTER-EXTER_1.bmp</resource>
 			</custom_drill_9>
 			<custom_drill_10>
 				<text>Réf. Inter Exter. Cercle</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\CERCLE INTER-EXTER_1.bmp</resource>
 			</custom_drill_10>
 			<custom_drill_11>
 				<text>""</text>
@@ -9178,34 +9176,34 @@ preadbuf5   # Read Buffer 1
 			</custom_drill_12>
 			<custom_drill_13>
 				<text>Réf. FACE EN Z</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Z-_1.bmp</resource>
 			</custom_drill_13>
 			<custom_drill_14>
 				<text>Réf. FACE EN X</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -X-_1.bmp</resource>
 			</custom_drill_14>
 			<custom_drill_15>
 				<text>Réf. FACE EN Y</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\FACE EN -Y-_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\FACE EN -Y-_1.bmp</resource>
 			</custom_drill_15>
 			<custom_drill_16>
 				<text>Réf. EN X IN-OUT</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\ENTRE 2 FACES_X_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\ENTRE 2 FACES_X_1.bmp</resource>
 			</custom_drill_16>
 			<custom_drill_17>
 				<text>Réf. EN Y IN-OUT</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\ENTRE 2 FACES_Y_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\ENTRE 2 FACES_Y_1.bmp</resource>
 			</custom_drill_17>
 			<custom_drill_18>
 				<text>Cycle 18</text>
 			</custom_drill_18>
 			<custom_drill_19>
 				<text>Brosse Ebavurage</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\Brosse Ebavurage.bmp</resource>
 			</custom_drill_19>
 			<custom_drill_20>
 				<text>Percage trEs profond</text>
-				<resource>C:\Users\Public\Documents\Shared Mastercam 2025\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
+				<resource>C:\Users\Public\Documents\Shared Mastercam 2026\mill\Posts\IMAGES PPs\PERCAGE TRES PROFOND_1.bmp</resource>
 			</custom_drill_20>
 		</drill_cycle_descriptions>
 		<canned_text>
