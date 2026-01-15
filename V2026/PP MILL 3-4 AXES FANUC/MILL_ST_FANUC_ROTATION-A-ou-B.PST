@@ -1,5 +1,5 @@
 [POST_VERSION] #DO NOT MOVE OR ALTER THIS LINE# V28.00 P0 E1 W28.00 T1757511906 M28.00 I0 O0
-scustpost_revision    : "26.1212" #:= Revision number for use by Resellers or customers.
+scustpost_revision    : "26.1501" #:= Revision number for use by Resellers or customers.
 # ----------------------------------------
 # - REALISE PAR                 --> FS
 # ---------------------------------------- config PP
@@ -106,7 +106,7 @@ coefficient_G0		: 10	# Facteur de correction des rapides en --> accélération &
 #   type de compensations outils par OP
 #
 # AJUSTEMENT DES TEMPS   		
-# 	Acces au client aux variables pour ajuster 
+# 	Acces aux clients pour ajuster les temps
 #	suivant des types d'opérations uniquement
 # ----------------------------------------
 #endregion
@@ -551,6 +551,8 @@ annEe_                  : 19    # annEe limite --> 20= 2020
 # correction affichage du 1er Z pour G1 après rotation
 # 27/01/25	- suppression de l'appel du ploc "p_ori_usi_nul" au changement d'outil nul
 # 24/04/25	- Gestion du M0 entre 2 OPs avec la rotation de broche et lub
+# 24/12/25  - Modif de la base de calcul en plaçant celle de Cédric
+# 15/01/26  - Ajout de Probing
 #endregion
 #endregion
 
@@ -922,7 +924,7 @@ fmt  ""     	2 axe_AB        # POSITION pour rotation plateau en ABS
 fmt  "B"       11 axe_ABi         # POSITION pour rotation plateau en INCREMENTAL
 fmt  "S"     	2 sens_AB      	# pour inverser le sens de l'axe
 fmt  ""     	2 axeAB_subs    # rotation pour continue substitution en ABS
-fmt  "A"       11 A_posi        # rotation pour continue substitution en INCREMENTAL
+
 fmt  "MAB"     	2 memo_AB_subs  # Memo du A/B du plan pour Ajout/soustraire
 fmt         	1 bloque        # pour gestion M10 M11
 fmt         	4 outils_param
@@ -1141,7 +1143,7 @@ yinc        = yabs
 zinc        = zabs
 axeA1_depi  = axeA1_dep
 axe_ABi     = axe_AB        	# A absolue en substitution
-A_posi      = axeAB_subs    	# A incremental en substitution
+
 zdevi       = zdev            	# Z pour continue substitutuion en INCREMENTAL
 sub_trnsx$  : -99999
 sub_trnsy$  : -99999
@@ -1703,7 +1705,10 @@ pprep$      # affectation des variables avant debut traitememt post pro
         result = mprint(serreur, 2)
         exitpost$
         ]
-    # bloc init post-pro en remplacement de la def armoire
+    
+	rot_ccw_pos = rot_dir	# Probing
+	
+	# bloc init post-pro en remplacement de la def armoire
     #pdebug
     if lire_def_machine = 0, p_force_config_pp, p_cycles_valides
     smcpath$ = ucase (smcpath$)     # convertir en MAJUSCULES les noms
@@ -1716,6 +1721,7 @@ pprep$      # affectation des variables avant debut traitememt post pro
     seqmax$         = 99999
     omitseq$        = yes$    # no$ = forcer la numerotation des blocs de 10 en 10    yes$ = pas de numérotation
 	p_type_tempo
+	probing_pprep
 
 p_cycles_valides    #pour réactivation après renvoie d'angle
     #   UTILISER LES CYCLES MACHINE ou DECOMPOSITION en G1 G0
@@ -2355,8 +2361,8 @@ pmachineinfo$    # lecture des parametre de def armoire et def machine
         ]
     if prmcode$ = 17399,    [                                       # AXE ROTATIF - +X=1,+Y=2,+Z=3,-X=7,-Y=8,-Z=9
         diviseur = rpar(sparameter$, 1)
-        if diviseur > 3, diviseur = diviseur - 6                    # ne garder que x y z
-        ]
+        if diviseur > 3, diviseur = diviseur - 6                    # ne garder que x y z      
+		]
     if prmcode$ = 17402,    [                                       # sens de l'axe rotatif -1=trigo 1=horaire
         sens_AB = rpar(sparameter$, 1)
         if sens_AB = 0, sens_AB = 1                               # variable sens pour le post pro
@@ -2695,6 +2701,353 @@ psub_end_m$   # fin sous prog en transformation
 #region CALCUL & AFFICHAGE EN POSITIONNE
 prot0$  #   Tool plan view matrix du gcode 1014
 prot$
+#region modif Cédric
+# var a exposer pour 4ieme axe
+VectAxe_X : -1 
+VectAxe_Y : 0 
+VectAxe_Z : 0
+axerot_Cal : 0
+AxeSRot_IS_Linear : yes$
+sAdreeseAxeRot : "A"
+UsePlanerotation : no$ # utiliser les G68.2
+Convention : 0 #0 = ZXZ(Euler) #1=XYZ(RPY)
+
+# Var de calcul
+splane : "G68.2"
+fmt "C" 2 AxeRotAff 
+inv : -1
+vperp_x : 0
+vperp_y : 0
+vperp_z : 0  
+den : 0    
+norm_q : 0 
+norm_v : 0   
+qperp_x : 0
+qperp_y : 0
+qperp_z : 0
+scal : 0
+norm : 0    
+vA_n_x : 0
+vA_n_y : 0
+vA_n_z : 0
+
+vC_n_x : 0
+vC_n_y : 0
+vC_n_z : 0
+
+cr_x : 0
+cr_y : 0
+cr_z : 0
+
+q_x : 0
+q_y : 0
+q_z : 0
+sq : 0
+qpar_x : 0
+qpar_y : 0
+qpar_z : 0
+sv : 0
+vpar_x : 0
+vpar_y : 0
+vpar_z : 0
+
+cosA : 0
+sinA : 0
+omcA : 0
+cosB : 0
+sinB : 0
+tx : 0
+ty : 0
+tz : 1
+fmt "I" 2 angle_autour_X
+fmt "J" 2 angle_autour_Y
+fmt "K" 2 angle_autour_Z
+cos_angleY : 0
+tr_x : 0
+tr_y : 0
+X_recal : 0
+Y_recal : 0
+Z_recal : 0
+X_Abs : 0
+Y_Abs : 0
+Z_Abs : 0
+t1 : 0
+t2 : 0
+t3 : 0
+t4 : 0
+t5 : 0
+t6 : 0
+t7 : 0
+t8 : 0
+t9 : 0
+t11 : 0
+t12 : 0
+t13 : 0
+t14 : 0
+t15 : 0
+t19 : 0
+t20 : 0
+t24 : 0
+MatB_1 : 1
+MatB_2 : 0
+MatB_3 : 0
+MatB_4 : 0
+MatB_5 : 1
+MatB_6 : 0
+MatB_7 : 0
+MatB_8 : 0
+MatB_9 : 1
+X_NewMat : 0
+Y_NewMat : 0
+Z_newMat : 0
+normV : 0
+X_pmx : 0
+Y_pmx : 0
+Z_pmx : 0
+pCalMatrixRot(X,Y,Z)
+    !axerot_Cal
+	t1 = cos(axerot_Cal)
+	t2 = 1 - t1
+	t3 = VectAxe_X * VectAxe_X
+	t6 = t2 * VectAxe_X
+	t7 = t6 * VectAxe_Y
+	t8 = sin(axerot_Cal)
+	t9 = t8 * VectAxe_Z
+	t11 = t6 * VectAxe_Z
+	t12 = t8 * VectAxe_Y 
+	t15 = VectAxe_Y * VectAxe_Y
+	t19 = t2 * VectAxe_Y * VectAxe_Z
+	t20 = t8 * VectAxe_X
+	t24 = VectAxe_Z * VectAxe_Z
+    MatB_1 = t1 + t2 * t3
+    MatB_2 = t7 - t9
+    MatB_3 = t11 + t12
+    MatB_4 = t7 + t9
+    MatB_5 = t1 + t2 * t15
+    MatB_6 = t19 - t20
+    MatB_7 = t11 - t12
+    MatB_8 = t19 + t20
+    MatB_9 = t1 + t2 * t24
+
+    X_NewMat = MatB_1 * X + MatB_2 * Y + MatB_3 * Z
+    Y_NewMat = MatB_4 * X + MatB_5 * Y + MatB_6 * Z
+    Z_newMat = MatB_7 * X + MatB_8 * Y + MatB_9 * Z   
+
+pcalcul_xyz_absolu(X,Y,Z)
+    # Calcul X Y Z en ABS
+    X = X + tox$
+    Y = Y + toy$
+    Z = Z + toz$
+    X_Abs = (X * m1$ + Y * m4$ + Z * m7$) 
+    Y_Abs = (X * m2$ + Y * m5$ + Z * m8$)
+    Z_Abs = (X * m3$ + Y * m6$ + Z * m9$)
+precalPos(X,Y,Z)
+    if UsePlanerotation = no$, # on recalcul les point tourné
+    [
+        # on recalcul le point en ABS
+        pcalcul_xyz_absolu(X,Y,Z)
+        # on Calcul la matrice former par la rotation
+        pCalMatrixRot(X_Abs,Y_Abs,Z_Abs)
+        X_recal = X_NewMat
+        Y_recal = Y_NewMat
+        Z_recal = Z_newMat
+    ]
+    else, # C est le plan qui fait le taf
+    [
+        X_recal = X
+        Y_recal = Y
+        Z_recal = Z
+    ]
+pcalConvention(Conv)
+    if Conv = 1,
+    [
+        angle_autour_Y = asin (m3$)
+        cos_angleY = cos (angle_autour_Y)
+        angle_autour_Y = angle_autour_Y *-1
+        if cos_angleY > 0.005 ,
+        [
+            #3 angle autour de X
+            tr_x = m9$ / cos_angleY
+            tr_y = -m6$ / cos_angleY
+            angle_autour_X  = atan2 (tr_y,tr_x)
+            if angle_autour_X > 180 , angle_autour_X = angle_autour_X - 360
+            angle_autour_X = angle_autour_X * -1
+            #4 angle autour de Z
+            tr_x = m1$ / cos_angleY
+            tr_y = -m2$ / cos_angleY
+            angle_autour_Z = atan2 (tr_y,tr_x)
+            if angle_autour_Z > 180 , angle_autour_Z = angle_autour_Z - 360
+            angle_autour_Z = angle_autour_Z * -1
+        ]
+        else,
+        [
+            # angle autour de X
+            angle_autour_X  = 0
+            # angle autour de Z
+            angle_autour_Z = atan2 (m4$,m5$)
+            if angle_autour_Z > 180 , angle_autour_Z = angle_autour_Z - 360
+            angle_autour_Z = angle_autour_Z * -1
+        ]
+    ]
+    else,
+    [
+        if m9$ < 1,
+        [
+            if m9$ > -1,
+            [
+                angle_autour_X = (atan2(m7$,-m8$))
+                angle_autour_Y = acos(m9$)
+                angle_autour_Z = atan2(m3$,m6$)
+            ]
+            else,
+            [
+                angle_autour_X = 180
+                angle_autour_Y = (atan2(-m2$,m1$)) *-1
+                angle_autour_Z = 0
+            ]
+        ]
+        else,
+        [
+            angle_autour_X = 0
+            angle_autour_Y = 0
+            angle_autour_Z = 0
+        ]
+    ]
+Usi5X: no$
+pCalAxe(type)
+    result = nwadrs(sAdreeseAxeRot,AxeRotAff)
+    Old_AxerotCal = axerot_Cal 
+    if type = 1, # calcul du positionne
+    [
+        if Usi5X,
+        [
+            tx = vtoolx$ # utilise vtool pour compatibilite percage 5X
+            ty = vtooly$
+            tz = vtoolz$
+            normV = sqrt(tx^2 + ty^2 + tz^2)
+            tx = tx / normV
+            ty = ty / normV
+            tz = tz / normV
+         ]
+        else,
+        [
+            tx = m7$
+            ty = m8$
+            tz = m9$
+        ]
+        norm = sqrt(VectAxe_X^2 + VectAxe_Y^2 + VectAxe_Z^2)
+
+        vC_n_x = (VectAxe_X / norm) *-1
+        vC_n_y = (VectAxe_Y / norm) *-1
+        vC_n_z = (VectAxe_Z / norm) *-1
+
+        q_x = 0 
+        q_y = 0
+        q_z = 1
+
+        sq = vC_n_x * q_x + vC_n_y * q_y + vC_n_z  * q_z
+        qpar_x = sq * vC_n_x
+        qpar_y = sq * vC_n_y
+        qpar_z = sq * vC_n_z
+
+        qperp_x = q_x - qpar_x
+        qperp_y = q_y - qpar_y
+        qperp_z = q_z - qpar_z
+
+        sv = vC_n_x * tx + vC_n_y * ty + vC_n_z * tz
+        vpar_x = sv * vC_n_x
+        vpar_y = sv * vC_n_y
+        vpar_z = sv * vC_n_z
+
+        vperp_x = tx - vpar_x
+        vperp_y = ty - vpar_y
+        vperp_z = tz - vpar_z
+
+        norm_q = sqrt(qperp_x * qperp_x + qperp_y * qperp_y + qperp_z * qperp_z)
+        norm_v = sqrt(vperp_x * vperp_x + vperp_y * vperp_y + vperp_z * vperp_z)
+        den = norm_q * norm_v
+        if den <> 0,
+        [
+            cosB = (qperp_x * vperp_x + qperp_y * vperp_y + qperp_z * vperp_z) / den
+            cr_x = qperp_y * vperp_z - qperp_z * vperp_y
+            cr_y = qperp_z * vperp_x - qperp_x * vperp_z
+            cr_z = qperp_x * vperp_y - qperp_y * vperp_x
+
+            sinB = (vC_n_x * cr_x + vC_n_y  * cr_y + vC_n_z * cr_z) / den
+            axerot_Cal = atan2(sinB,cosB)
+            if AxeSRot_IS_Linear = no$,
+            [
+                 if axerot_Cal > 180, axerot_Cal = axerot_Cal -360
+            ]
+        ]
+        else,
+        [
+            axerot_Cal = 0
+        ]
+    ]
+    if type = 2, # calcul de la substitution
+    [
+        if rotary_axis$ = 2, #substitu X
+        [
+            axerot_Cal = (-x$ * 360 / (pi$ * rotdia$) + 90) * VectAxe_Y
+        ]
+        if rotary_axis$ = 1, #substitu Y
+        [
+            axerot_Cal = (y$ * 360 / (pi$ * rotdia$) + 90) * VectAxe_X
+        ]
+    ]
+    delta_rot = Old_AxerotCal -  axerot_Cal
+    AxeRotAff = axerot_Cal
+    if AxeSRot_IS_Linear , pCont
+pCont  
+    if abs (delta_rot) > 180,
+    [
+        if delta_rot > 0, nb_tour = nb_tour +1
+        if delta_rot < 0, nb_tour = nb_tour -1
+    ]
+    AxeRotAff = axerot_Cal + 360 * nb_tour  
+pCalXYZ_pmx
+    pCalMatrixRot(x$,y$,z$)
+    X_pmx = X_NewMat
+    Y_pmx = Y_NewMat
+    Z_pmx = Z_NewMat
+
+nb_tour : 0
+delta_rot : 0
+Old_AxerotCal : 0
+pplane
+    pcalConvention(Convention)
+    if Convention = 1 , splane = "G68.2 P1"
+    else, splane = "G68.2 P0"
+    n$ splane , *tox4$,*toy4$,*toz4$, *angle_autour_X, *angle_autour_Y, *angle_autour_Z ,e$
+p_rot_ptlchg # affichage de l'angle au changement d'outil pour positionné
+    if mi7$ = 1, bloque = 2, n$, sbloque, e$
+    n$, *AxeRotAff ,e$
+    if mi7$ = 1, bloque = 1, n$, sbloque, e$
+    if UsePlanerotation, pplane
+p_rot_tlchg0
+    if delta_rot <> 0,
+    [
+        p_degage_4_axes                                 	# Dégagement machine avant la rotation de l'axe A
+        if mi7$ = 1, bloque = 2, n$, sbloque, e$        	# déblocage de l'axe A/B
+        n$, *AxeRotAff ,e$
+        if mi7$ = 1, bloque = 1, n$, sbloque, e$        	# blocage de l'axe A/B 
+        if UsePlanerotation, pplane
+        rot_tlchg_zero = 1
+    ]
+pdefineBreak
+    if rotaxis$ <> 0,
+    [
+        breakarcs$ = 1
+        brklinestype$ = 6
+        brklineslen$ = 0.02 # peut etre a definir en variable
+    ]
+    else,
+    [
+        breakarcs$ = 0
+        brklinestype$ = 0
+    ]
+#endregion 
 
 p_calcul_rot_posit   # calcul de l'axe A en positionné
     @old_axe_AB, @nbrtour
@@ -2720,7 +3073,7 @@ p_calcul_rot_posit   # calcul de l'axe A en positionné
     memo_AB_subs = axe_AB
     if Mode_reglage_PP = 0,  "--> p_calcul_rot_posit div:", *diviseur, "old:", *old_axe_AB, "axe:", *axe_AB, "epsi:", *epsi, "sens:", *sensA, "nbrTour:", *nbrtour, *memo_AB_subs, e$
 
-p_rot_ptlchg   # affichage de l'angle au changement d'outil pour positionné
+p_rot_ptlchg_old   # affichage de l'angle au changement d'outil pour positionné
     if Mode_reglage_PP = 0, n$, "--> p_rot_ptlchg", e$
     #Perreur_origine_plan
     Perreur_nom_RUD
@@ -2738,7 +3091,7 @@ p_rot_ptlchg   # affichage de l'angle au changement d'outil pour positionné
        ]
     old_axe_AB = axe_AB         # memo de la position de l'axe A affiché
 
-p_rot_tlchg0   # affichage de l'angle au changement d'outil nul pour positionné
+p_rot_tlchg0_old   # affichage de l'angle au changement d'outil nul pour positionné
     #Perreur_origine_plan
     Perreur_nom_RUD
     if ra_type$ = 0, perreur_transf_plan   # pas de broche à RENVOIE d'ANGLE
@@ -2759,12 +3112,14 @@ p_rot_tlchg0   # affichage de l'angle au changement d'outil nul pour positionné
             if mi7$ = 1, bloque = 1, n$, sbloque, e$        	# blocage de l'axe A/B
             gcode$ = 0
             if incremental = 0, [                           	# Rappel des positions XYZ avant le dégagement         
-				xabs = xr$
-				yabs = yr$ 
+				precalPos(xr$,yr$,zr$)
+	            xabs = X_recal
+	            yabs = Y_recal
+	            zabs = Z_recal
 				if xabs <> prv_xabs | yabs <> prv_yabs, n$, *sgcode, sinc_abs, *xabs, *yabs, e$
 				if affiche_G43_H = 2 & deg_4_axes > 0 & mi2$ = 0, [
 					zabs = nextz$ 
-					n$, sgcode, sg43, "H", *correcteur_H, *zabs, e$
+					n$, sgcode, pcorh, *zabs, e$
 					old_zabs = zabs  
 					]      
                 !x$, !y$, !z$
@@ -2948,19 +3303,19 @@ p_calcul_rot_pmx  # Calcul de l'axe A
 #endregion
 
 #region pmx_
+ccAff : 0
 p_corr_5x
 	# Valable pour la correction de rayon uniquement en USURE :
 	# tool_op$ = 106 --> alésage helicoidale 
 	if type_comp = 5 | type_comp = 6, [
 		if fr$ > 0 & cc$ = 41 | cc$ = 42 & (motst$ = 7), [
-			#if premier_cc_5x = 1, *cc$, premier_cc_5x = 0
-			if prv_gcode$ = 1 & prv_zabs = zabs, *cc$, premier_cc_5x = 1
+			if prv_gcode$ = 1 & prv_zabs = zabs, *cc$, premier_cc_5x = 1, ccAff = 41
 			]	
-		if fr$ = -2 & cc$ = 41 | cc$ = 42 & prv_zabs <> zabs & premier_cc_5x = 1, n$, "G40", e$, premier_cc_5x = 0
+		if fr$ = -2 & cc$ = 41 | cc$ = 42 & prv_zabs <> zabs & premier_cc_5x = 1, n$, "G40", e$, premier_cc_5x = 0, ccAff = 40
 		] 
-	#*fr$, *motst$, *cc$, 
 	
 pmx$        # Gestion 4 axes continues avec fonction 5 axes
+   Usi5X = yes$
     if Mode_reglage_PP = 0, n$, "--> pmx$", *x$, *y$, *z$, *zr$, *xnci$, *ynci$, *znci$, *u$, *v$, *w$,
         *m9$, *m8$, *m7$, *m6$, *m5$, *m4$, *m3$, *m2$, *m1$, e$
 	
@@ -2972,37 +3327,26 @@ pmx$        # Gestion 4 axes continues avec fonction 5 axes
 	# 		- p_drill_5axes_2  A suivants	 			
 	if opcode$ = 16 & nextop$ = 81, drill_4_axes = 1, p_drill_5axes, ex$ 
 	if opcode$ = 16 & nextop$ = 81 & debutpmx = 11, p_drill_5axes_2, ex$ # PAS de gestion du perçage 5 axes ICI
-	
+	pCalAxe(1)
+    pCalXYZ_pmx
+    xabs = X_pmx
+	yabs = Y_pmx
+    zabs = Z_pmx
 	if debutpmx = 1, p_debut_pmx, ex$
     # 5 AXES classique
     if debutpmx = 0 & opcode$ <> 16,    [
         if Mode_reglage_PP = 0, "pmx_ CONTOURS: ", e$
-        p_calcul_rot_pmx
         if m1$ <> 1 & m5$ <> 1, p_erreur_inclinaison_OP_5axes     # TEST si mauvaise inclinaison
         if fr$ = -2, gcode$ = 0
         else, gcode$ = 1
         if gcode$ = 1,    [
             @xabs, @yabs, @old_x, @old_y
-            if xabs <> old_x | yabs <> old_y, n$, p_ori_usi, e$, n$, sinc_abs, sgcode, p_corr_5x, xabs, yabs, zabs, p_axeAB_pmx, pcorrecteur_D, pfr, e$
-            else, n$, p_ori_usi, e$, n$, sinc_abs, sgcode, p_corr_5x, xabs, yabs, zabs, p_axeAB_pmx, pcorrecteur_D, pfr, e$
+            if xabs <> old_x | yabs <> old_y, n$, p_ori_usi, e$, n$, sinc_abs, sgcode, p_corr_5x, xabs, yabs, zabs, AxeRotAff, pcorrecteur_D, pfr, e$
+            else, n$, p_ori_usi, e$, n$, sinc_abs, sgcode, p_corr_5x, xabs, yabs, zabs, AxeRotAff, pcorrecteur_D, pfr, e$
             ]
-        else, p_corr_5x, n$, sinc_abs, sgcode, xabs, yabs, zabs, p_axeAB_pmx, e$
+        else, p_corr_5x, n$, sinc_abs, sgcode, xabs, yabs, zabs, AxeRotAff, e$
+		ccAff = 40
         ]
-    # Uniquement perçage 5 axes
-    #if debutpmx = 0 & opcode$ = 16,    [
-        #if Mode_reglage_PP = 1, "pmx_ PERCAGES: ", e$
-		#p_calcul_rot_pmx
-        #if mi7$ = 1, bloque = 2, n$, sbloque, e$        # déblocage de l'axe A/B
-        #if fr$ = -2, gcode$ = 0, else, gcode$ = 1
-        #n$, sgcode, *xabs, *yabs, *zabs, p_axeAB_pmx, pfr, e$
-        #old_op_id = op_id$
-        #]
-    #if debutpmx = 0 & opcode$ = 16 & gcode$ = 11 & nextop$ = 1003, #FIN DE PERCAGES --> Z HAUT SECU
-        #[
-        #p_calcul_rot_pmx
-        #gcode$ = 0
-        #n$, *sgcode, *zabs, e$
-        #]
     old_x = xabs
     old_y = yabs
     old_z = zabs
@@ -3010,20 +3354,14 @@ pmx$        # Gestion 4 axes continues avec fonction 5 axes
 p_debut_pmx
 	#spaces$ = 1
     if Mode_reglage_PP = 0, n$, "p_debut_pmx : ", e$
-    p_calcul_rot_pmx
     if mi7$ = 1, bloque = 2, n$, sbloque, e$        # déblocage de l'axe A/B
     gcode$ = 0
 	p_ori_usi
-    n$, *sinc_abs, *sgcode, p_axeAB_pmx, e$ 
+    n$, *sinc_abs, *sgcode, AxeRotAff, e$ 
 	if opcode$ = 16, if mi7$ = 1, bloque = 1, n$, sbloque, e$        # déblocage de l'axe A/B
-	
-	if diviseur = 1, new_y = z$*sin(axeA2) + y$*cos(axeA2)
-	if diviseur = 2, new_x = z$*sin(axeA2) + x$*cos(axeA2)
-	
-	if diviseur = 1, n$, *sinc_abs, *sgcode, "G17", *xabs, *new_y, ssa, spdlon, e$ 	
-	if diviseur = 2, n$, *sinc_abs, *sgcode, "G17", *new_x, *yabs, ssa, spdlon, e$ 
+	n$, *sinc_abs, *sgcode, "G17", *xabs, *yabs, ssa, spdlon, e$ 	
 	zr_ = zr$ 
-    if opcode$ <> 16, n$, pcorh, *zr_, p_lubrif_ON, e$
+    if opcode$ <> 16, n$, pcorh, *zabs, p_lubrif_ON, e$
 	if opcode$ = 16, new_z = old_z, n$, pcorh, *zabs, p_lubrif_ON, e$, zabs_deb_fin_secu_p_5x = zabs
     !x$, !y$, !z$, !xr$, !yr$, !zr$
 	premier_cc_5x = 1
@@ -3031,6 +3369,7 @@ p_debut_pmx
     old_y = yabs
     old_z = zabs
     debutpmx = 0
+	old_axe_AB = AxeRotAff
 
 pmx_end$    #FIN de chaque BLOC pmx$
     if Mode_reglage_PP = 0, "pmx_end_: ", e$
@@ -4054,6 +4393,8 @@ psof$        # DEBUT DE PROGRAMME T<>0
         ]
     if rotation_A = 1, result = nwadrs(s_axe_rot_A, axe_AB)
     if rotation_B = 1, result = nwadrs(s_axe_rot_B, axe_AB)
+	
+	probing_sof # Probing
     #
     if outils_param = 1,  [                      # avec les parametres
         n$, " ", e$
@@ -4103,9 +4444,12 @@ psof$        # DEBUT DE PROGRAMME T<>0
     n$, *sgcode, "G94 G90 G40 G80 G98 G17", e$  # Initialisation de la machine
 	if convoyeur = 1, n$, s_convoyeur_ON, e$
     incremental = 0                             # pour re forcer l'affichage du mode Absolue
-    p_palette_debut	# PALETTES
+    inhibit_probe$ 				# Probing
+	p_palette_debut	# PALETTES
     p_degage_debut
 	comment$ 
+	uninhibit_probe$			# Probing
+    probing_before_toolchange	# Probing
     p_affiche_outil
 	#temps DLL
 	Tot_time_op = 0	#remise à 0 entre l'entete et OPs
@@ -4149,25 +4493,30 @@ p_placement_apres_chang_outil           # AFFICHAGE DES MOUVEMENTS MACHINE
         zabs = z$
         if ra_block$ >0, p_calcul_xyz_tete_renvoie                      # RENVOIE D'ANGLE
         if rotaxis$ = 0,    [                                           # 3 axes + diviser en positionne
-            p_calcul_rot_posit                                          # calcul rotation plateau
-            if Systeme_rot_plans <> 5, old_axe_AB = -99999                # pour forcer l'affichage
+            pCalAxe(1)                                          		# calcul rotation plateau
+            if Systeme_rot_plans <> 5, old_axe_AB = -99999              # pour forcer l'affichage
             p_ori_usi
+			precalPos(xr$,yr$,zr$)
+            xabs = X_recal
+            yabs = Y_recal
+            zabs = Z_recal
             n$, *sgcode, *sinc_abs, p_type_avance, "G17", *xabs, *yabs, e$
             p_rot_ptlchg                                                # affichage de l'angle au chg outil
             n$, pcorh, *zabs, e$
             ]
-        if rotaxis$ <> 0,   [                                           # utilisation en substitution
-            p_calcul_rot_posit
-            p_calcul_AB_pos_Subs
+        if rotaxis$ <> 0,   
+        [        
+            pCalAxe(2)
             if mi7$ = 1, bloque = 2, n$, sbloque, e$        			# déblocage de l'axe A/B
             if rotaxis$ = -1 | rotaxis$ = 1, xabs = 0                   # diviseur tourne autour de Y (X sbstitue)
-            if rotaxis$ = -2 | rotaxis$ = 2,  yabs = 0                  # diviseur tourne autour de X (Y sbstitue)
-            p_ori_usi
-            n$, *sgcode, *sinc_abs, p_type_avance, "G17", *axeAB_subs, e$
+            if rotaxis$ = -2 | rotaxis$ = 2, yabs = 0                  # diviseur tourne autour de X (Y sbstitue)
+            pCalAxe(2)
+			p_ori_usi
+            n$, *sgcode, *sinc_abs, p_type_avance, "G17", *AxeRotAff, e$
             if mi7$ = 1, bloque = 1, n$, sbloque, e$					# si ROT - Bloque
 			n$, *xabs, *yabs, e$
             n$, pcorh, *zabs, e$
-            ]
+        ]
         p_modal                                                                 	# affectation en format modal
         !x$, !y$, !z$, !xabs, !yabs, !zabs, !xinc, !yinc, !zinc, !axe_AB, !axe_ABi  	# mise à jour des positions affichées
         ]
@@ -4181,10 +4530,12 @@ p_placement_apres_chang_outil           # AFFICHAGE DES MOUVEMENTS MACHINE
     old_z = zabs
     c_mmlt$                     # Multiple tool subprogram call
     c_msng$						# Single tool subprogram call
+	probing_after_coordinates 	# Probing
 #endregion
 
 #region ptlchg0
 ptlchg0$     # CHANGEMENT D'OUTIL NUL
+    Usi5X = no$
     Perreur_nom_RUD
     perreur_pas_fil
     #p_erreur_dif_T_H_D
@@ -4194,7 +4545,12 @@ ptlchg0$     # CHANGEMENT D'OUTIL NUL
     gcode$ = 0                                      # Force le gcode a 0 pour faire un G0 apres
     linarc$ = 0                                     # pour activer les G2 G3
     typcycle = 0                                    # variable mise a 1 lors des percages pour afficher l'intitulé du cycle
-    if Test_bris_outils = 1, [
+    # Probing
+	probing_before_toolchange
+	!op_id$  # Added with probing support
+	inhibit_probe$
+	
+	if Test_bris_outils = 1, [
         pcool_off
         n$, "M5", e$
         p_test_bris_outil
@@ -4230,20 +4586,31 @@ ptlchg0$     # CHANGEMENT D'OUTIL NUL
 			p_dec_renvoi_angle     						# 1 =renvoie d'angle actif et NUM choix du multibroche
 			]
 		]
-    if nextop$ <> 11, [                             # utilisation en positionné ou substitution
+    if nextop$ <> 11, 
+    [                             # utilisation en positionné ou substitution
         gcode$ = 0                                  # Force le gcode a 0 pour faire un G0 apres
         xabs = x$                                   # prise en compte de XYZ
         yabs = y$
         zabs = z$
-        if rotaxis$ = 0, [                          # 3 axes + diviseur en positionné
-			p_calcul_rot_posit                      # calcul rotation plateau
+        pdefineBreak
+		if rotaxis$ = 0, 
+        [                          # 3 axes + diviseur en positionné
+			pCalAxe(1)                      		# calcul rotation plateau
             p_ori_usi                           	# affichage de l'origine d'usinage
             p_rot_tlchg0                            # affichage de l'angle
-			]
-        if rotaxis$ <> 0,  [                        # si on passe de positionné à SUBSTITUTION     & old_rotaxis = 0
-            p_calcul_rot_posit                                              # Convertir les G2 G3 en G1
-            p_calcul_AB_pos_Subs                                            # calcul de l'axe A en substitution
-            if rotaxis$ = -1 | rotaxis$ = 1, xabs = 0                       # diviseur tourne autour de Y (X sbstitue)
+			precalPos(xr$,yr$,zr$)
+            xabs = X_recal
+            yabs = Y_recal
+            zabs = Z_recal
+        ]
+        if rotaxis$ <> 0,  
+        [                        # si on passe de positionné à SUBSTITUTION     & old_rotaxis = 0
+            pCalAxe(2)                                            			# calcul de l'axe A en substitution
+            xabs = nextx$
+            yabs = nexty$
+            zabs = nextz$ + (rotdia$/2)
+            pCalAxe(2)
+			if rotaxis$ = -1 | rotaxis$ = 1, xabs = 0                       # diviseur tourne autour de Y (X sbstitue)
             if rotaxis$ = -2 | rotaxis$ = 2, yabs = 0                       # diviseur tourne autour de X (Y sbstitue)
             p_Apos_affiche_subs                                             # affichage de l'angle au chg outil nul pour continue/substitution
             p_ori_usi
@@ -4252,8 +4619,8 @@ ptlchg0$     # CHANGEMENT D'OUTIL NUL
             n$, sgcode, sinc_abs, zabs, !zinc, e$
             p_modal                                                         # affectation en format modal
             !x$, !y$, !z$, !xabs, !yabs, !zabs, !xinc, !yinc, !zinc, !axe_AB, !axe_ABi  # mise à jour des positions affichées
-            ]
         ]
+    ]
     if nextop$ = 11,   [                               # si 4 axes avec fonction 5 axes
         if op_id$ <> old_op_id,    [
             old_axeA1 = 0
@@ -4275,6 +4642,7 @@ ptlchg0$     # CHANGEMENT D'OUTIL NUL
     p_erreur_choix_axe_substitution
     c_mmlt$     # Multiple tool subprogram call
 	c_msng$		# Single tool subprogram call
+	probing_after_coordinates	# Probing
 #endregion
 
 #region ptlchg
@@ -4301,13 +4669,15 @@ pspindchng      #Spindle speed change
     !ssa, !spdlsel
 
 ptoolend$        #End of tool path, before reading new tool data
-    !ssa, !spdlsel
+    probing_ptoolend
+	!ssa, !spdlsel
     Test_bris_outils = mi6$
 	type_test_bris_outils = mi5$
 	old_Test_bris_outils = Test_bris_outils
 	old_type_test_bris_outils = type_test_bris_outils
 
 ptlchg$      # CHANGEMENT D'OUTIL
+    Usi5X = no$
     increment_op_outil = 1
     p_lubrif_OFF
     pas = 0
@@ -4327,7 +4697,11 @@ ptlchg$      # CHANGEMENT D'OUTIL
         #p_cycles_valides                        # réactives les cycles utilisables après le Renvoie
         sauve_ra_block_ = 2
         ]
-    n$, *sm_01, e$	#"M5"
+    # Probing
+	inhibit_probe$
+    probing_before_toolchange
+	
+	n$, *sm_01, e$	#"M5"
     p_degage_ptlchg
 	debut_out = 1
     gcode$ = 0
@@ -4416,8 +4790,9 @@ peof0$
    peof$
 	
 peof$
-    #n$, "G0", *zrp, e$
-    p_lubrif_OFF                        	# Arret lubriff
+    probing_ptoolend
+	
+	p_lubrif_OFF                        	# Arret lubriff
     p_ugv_off
     n$, "M5", e$                            # Arret broche
     if decalage = 1 | sauve_ra_block_ >0, [     # Annulation du décallage FIN du renvoie d'angle
@@ -4449,8 +4824,8 @@ peof$
         if outils_param = 1 & nom_outil = 0, outil_suiv_param = 0, n$, "T", no_spc$, 35, *outil_suiv_param, "M6", e$
         ]
 		
-    if useaxe <> 0 & old_axe_AB <> 0,  [      # Remise a 0 de l'axe A si pas a Zero
-        axe_AB = 0
+    if useaxe <> 0 & old_axe_AB <> 0,  [    # Remise a 0 de l'axe A si pas a Zero
+        AxeRotAff = 0
         p_rot_ptlchg                        # affichage de l'angle
         ]
     plane$ = 3                              # pour focer le rappel G17 G18 G19
@@ -4489,8 +4864,11 @@ peof$
 		p_Convert_time_dll
 		n$, s_com_open, "TEMPS TOTAL CORRIGE ", *Heure, *min, *sec, s_com_close, e$
 		]  
+	
+	uninhibit_eof_probe$
+    probing_eof
 	#
-    if fin_programme = 1, n$, "M30", e$     # Fin si l'outil à renvoie d'angle non défini en longueur
+	if fin_programme = 1, n$, "M30", e$     # Fin si l'outil à renvoie d'angle non défini en longueur
     if fin_programme = 2, n$, "M02", e$
 	if fin_programme = 3, n$, "M99", e$
 	
@@ -4509,7 +4887,9 @@ peof$
     #if affiche_ori_entete = 22 & workofs_pwrtt > 54, mergeext$    # dans un autre fichier ".AUX"
     #clearext$                              # Effacer les sous-prog
     if affiche_ori_entete = 1 | affiche_ori_entete = 11, clearsub$	# Effacer les fichiers "sub" ORIGINES
-    "%", e$                                 # fin de fichier
+    
+	if pst_return_mode$, "(PRB_PST MC_EOF_TEXT % PRB_PST)", e$
+    else, "%", e$                                # fin de fichier
 #endregion
 #endregion
 
@@ -4822,7 +5202,7 @@ pcalcul_plan
         angle_autour_Z = angle_autour_Z * -1
     ]
 
-pcalcul_xyz_absolu
+pcalcul_xyz_absolu_old
     !angle_autour_X, !angle_autour_Y, !angle_autour_Z
     angle_autour_X_2 = angle_autour_X * -1
     angle_autour_Z_2 = angle_autour_Z * -1
@@ -4847,9 +5227,9 @@ angle_autour_X : 0
 xplan_inter : 0
 yplan_inter : 0
 zplan_inter : 0
-tr_y : 0
-tr_x : 0
-cos_angleY : 0
+#tr_y : 0
+#tr_x : 0
+#cos_angleY : 0
 x1 : 0
 y1 : 0
 z1 : 0
@@ -4899,20 +5279,20 @@ pxyz_new    # ecriture des positions X Y Z et A pour XYZ CLASIQUE et substitutio
     #else, !xabs, !yabs, !axe_AB, !zabs, xinc, yinc, axe_ABi, zinc
 
     if rotaxis$ = -2 | rotaxis$ = 2, [    # SUBSTITUTION Y par A (diviseur tourne autour de X)
-        p_calcul_AB_pos_Subs
+        pCalAxe(2)
         yabs = 0
         xabs = x$
-        xabs, [if yabs <> old_y, yabs], zdev, axeAB_subs, !yabs, !zabs     #, !xinc, !yinc, !zinc, !A_posi, !zdevi
+        xabs, [if yabs <> old_y, yabs], zdev, AxeRotAff, !yabs, !zabs    
         axe_AB = axeAB_subs
         old_y = 0
         nbrtour = int (axe_AB / 360)
         old_axe_AB  = axeAB_subs
         ]
     if rotaxis$ = -1 | rotaxis$ = 1, [   # SUBSTITUTION X par A (diviseur tourne autour de Y)
-        p_calcul_AB_pos_Subs
+        pCalAxe(2)
         xabs = 0
         yabs = y$
-        [if xabs <> old_x, xabs], yabs, zdev, axeAB_subs, !xabs, !zabs     #, !xinc, !yinc, !zinc, !A_posi, !zdevi
+        [if xabs <> old_x, xabs], yabs, zdev, AxeRotAff, !xabs, !zabs    
         axe_AB  = axeAB_subs
         old_x = 0
         old_axe_AB  = axeAB_subs
@@ -5456,12 +5836,12 @@ pmisc2$     # Cycle
 
 p_transit_perc_subst	# SUBSTITUTION 	# TROUS SUIVANTS
 	pcanceldc$
-	p_calcul_AB_pos_Subs
+	pCalAxe(2)
 	if axeAB_subs <> old_axe_AB, 
 		[
 		gcode$ = 0
 		if mi7$ = 1, bloque = 2, n$, sbloque, e$	# si ROT - Débloque			
-		n$, *sgcode, *axeAB_subs, e$
+		n$, *sgcode, *AxeRotAff, e$
 		if mi7$ = 1, bloque = 1, n$, sbloque, e$	# si ROT - Bloque
 		]
     @depth$
@@ -5474,8 +5854,8 @@ p_transit_perc_subst	# SUBSTITUTION 	# TROUS SUIVANTS
     !refht$
 	if rotaxis$ = -1 | rotaxis$ = 1, yabs = y$ 
 	if rotaxis$ = -2 | rotaxis$ = 2, xabs = x$ 
-	#if incremental = 0, *xabs, *yabs, axeAB_subs, e$, !xinc, !yinc, !axe_ABi
-    #else, !xabs, !yabs, !axeAB_subs, *xinc, *yinc, *axe_ABi, e$ 	
+	#if incremental = 0, *xabs, *yabs, AxeRotAff, e$, !xinc, !yinc, !axe_ABi
+    #else, !xabs, !yabs, !AxeRotAff, *xinc, *yinc, *axe_ABi, e$ 	
 	old_axe_AB = axeAB_subs
     nbrtour = int (axe_AB / 360)
 		
@@ -5633,11 +6013,8 @@ p_drill_5axes   # ecriture pour TOUS LES percageS en 4 axes continus **AVEC** ZO
         *m9$, *m8$, *m7$, *m6$, *m5$, *m4$, *m3$, *m2$, *m1$, e$
     #p_Z_mini_maxi_OP
     gcode$ = 0
-    #xabs = xnci$
-    #yabs = ynci$
-    #p_drill_5axes_commun_debut
-	p_calcul_rot_pmx
-	n$, `sgcode, p_axeAB_pmx, e$ 	
+	pCalAxe(1)
+	n$, `sgcode, AxeRotAff, e$ 	
     if t$ <> old_t, [
         #n$, "G52 X0. Y0. Z0.", e$
         #p_degage_4_axes
@@ -5669,7 +6046,7 @@ p_drill_5axes_2   # ecriture DE TOUS LES percageS SUIVANTS en 4 axes continus **
         z$ = refht$
         zp = z$
         ]
-    p_calcul_rot_pmx
+    pCalAxe(1)
     pdril5x_annul
     # *old_axe_AB, *epsi, e$
     if epsi <> 0, [
@@ -6166,7 +6543,7 @@ p_XY_perc     # ecriture des x, y en abs ou incremental pour percage
         else, !xabs, !yabs, !prof_abs, !garde_abs, xinc, yinc, prof_inc, garde_inc
         ]
     if rotaxis$ <> 0, [    # SUBSTITUTION 	# 1er TROU UNIQUEMENT
-		p_calcul_AB_pos_Subs
+		pCalAxe(2)
         @depth$
         @refht$
 		prof_abs = (rotdia$/2) - abs(depth$)
@@ -6175,8 +6552,8 @@ p_XY_perc     # ecriture des x, y en abs ou incremental pour percage
         garde_inc = refht$
         !depth$
         !refht$
-        if incremental = 0, xabs, yabs, axeAB_subs, prof_abs, garde_abs, !xinc, !yinc, !axe_ABi, !prof_inc, !garde_inc
-        else, !xabs, !yabs, !axeAB_subs, !prof_abs, !garde_abs, xinc, yinc, axe_ABi, prof_inc, garde_inc
+        if incremental = 0, xabs, yabs, AxeRotAff, prof_abs, garde_abs, !xinc, !yinc, !axe_ABi, !prof_inc, !garde_inc
+        else, !xabs, !yabs, !AxeRotAff, !prof_abs, !garde_abs, xinc, yinc, axe_ABi, prof_inc, garde_inc
         old_axe_AB = axeAB_subs
         nbrtour = int (axe_AB / 360)
         ]
@@ -6514,6 +6891,7 @@ pwrttparam$    # lire les parametres (des outils) avant la sortie de l'ISO
     if prmcode$ = 20020, snom_porte_outil = sparameter$
     if prmcode$ = 20021, snom_assemblage_outil_porte_outil = sparameter$
     longsmand = strlen(smand)
+	probing_pwrttparam
 
 parrosage  # affichage de "arrosage au centre"
     if paramT15 = 2, "ARROSAGE AU CENTRE"
@@ -6901,6 +7279,544 @@ preadbuf5   # Read Buffer 1
       if b5_zmax > max_depth, max_depth = b5_zmax
         ]
 #endregion
+
+#region Mastercam_Probe
+
+# --------------------------------------------------------------------------
+# Mastercam Probing
+# --------------------------------------------------------------------------
+
+# Probing chook buffer
+prb_bufno                 := 10
+prb_rc                    :  1
+prb_size                  :  0
+sprb_result               :  ""
+
+fbuf 10 0 256 1 1
+
+# Probing chook path and argument strings
+sprb_chook                : ""
+sprb_arg1                 : ""
+sprb_arg2                 : ""
+sprb_arg3                 : ""
+sprb_args                 : ""
+
+# Probing output file settings - Do not edit!
+sprb_path                 : ""
+sprb_file                 : "Probing"
+sprb_nci                  : ".PrbNci"
+sprb_cfg                  : ".PrbCfg"
+
+# Probing dll call parameters
+prb_call_dll              : 0
+sprb_mode                 : 0      # Mode
+sprb_opid                 : 0      # Operation ID or 0 for all operations
+sprb_misc                 : 0      # Cut/Nullchange
+prb_result                : 0
+
+prb_wo_updated            : 0      # Set by chook! - if probe cycle updated machine work offset
+prb_tool_updated          : 0      # Set by chook! - if probe cycle updated machine tool data
+prb_rotaxis_updated       : 0      # Set by chook! - if probe cycle updated machine rotary axes
+prb_plane_measured        : 0      # Set by chook! - if probe cycle measured a plane
+
+prb_retract               : 0      # 1 = Retract, cancel planes etc...
+
+# Chook calling modes (sprb_mode)
+CheckProbingOperationType := 0     # Check if current operation has probing
+Prb_Active                := 2^0   # Operation is with probe tool
+Prb_Output                := 2^1   # Probe operation
+Prb_Suppress_Toolchg      := 2^2   # Suppress toolchange
+Prb_Suppress_First_Pos    := 2^3   # Suppress first position
+Prb_Transition            := 2^4   # Transitioning between probing operations
+Prb_3ax_Transition        := 2^5   # 3-axis transitioning between probing operations
+Prb_5ax_Transition        := 2^6   # 5-axis transitioning between probing operations
+Prb_Before_Tlchg          := 2^7   # Probing_output_after - Normal operation with probing output after toolchange or between operations in ptlchg0$
+Prb_After_Tlchg           := 2^8   # Probing_output_after - Normal operation with probing output after toolchange or between operations in ptlchg0$
+
+Generate_ProbingOutput    := 1     # Generate probing output
+                                   # sprb_opid > 0 (Specify operation op id number)
+                                   # sprb_misc > 0 (nullchange number, 1 = first)
+
+Generate_BeforeTlchg      := 2     # Generate "Before toolchange" output
+                                   # sprb_opid > 0 (Specify operation op id number)
+                                   # sprb_misc > 0 (nullchange number, 1 = first)
+
+Generate_AfterTlchg       := 3     # Generate "After toolchange" output
+                                   # sprb_opid > 0 (Specify operation op id number)
+                                   # sprb_misc > 0 (nullchange number, 1 = first)
+
+Generate_StartProgram     := 6     # Generate "After toolchange" output
+                                   # sprb_opid > 0 (Specify operation op id number)
+                                   # sprb_misc > 0 (nullchange number, 1 = first)
+
+Generate_EndProgram       := 7     # Generate "After toolchange" output
+                                   # sprb_opid > 0 (Specify operation op id number)
+                                   # sprb_misc > 0 (nullchange number, 1 = first)
+
+ModifyProbing             := 4     # Modify probing operations
+
+probing_call_chook
+   # Make sure buffers are closed
+   prb_result = fclose(10)
+
+   sprb_arg1 = no2str(sprb_mode)
+   sprb_arg2 = no2str(sprb_opid)
+   sprb_arg3 = no2str(sprb_misc)
+   sprb_args = '"' + sprb_arg1 + '" "' + sprb_arg2 + '" "' + sprb_arg3 + '"'
+
+   prb_result = dll (sprb_chook, sprb_args)
+
+   # dll always return 1, get result from chook
+   sbufname10$ = sprb_path + sprb_file + sprb_nci
+   prb_result = fclose(sbufname10$)
+
+   prb_result = -1
+   if fexist(sbufname10$),
+      [
+      sprb_result = "0"
+      prb_rc = 1
+      prb_size = rbuf(prb_bufno, 0)
+      if prb_size, sprb_result = rbuf(prb_bufno, prb_rc)
+      prb_result = rpar(sprb_result, 1)
+      ]
+   else, result = mprint("probing_call_chook : Not fexist(sbufname10$)")
+
+# --------------------------------------------------------------------------
+# Mastercam Probing - Write config (Overwrite probing settings before generating probing NCI)
+
+probing_write_config_start
+   spathext$ = sprb_path
+   snameext$ = sprb_file
+   sextext$  = sprb_cfg
+   extprg$ = 1 # Delete existing settings
+   subout$ = 3
+   newext$
+
+probing_write_config_end
+   subout$ = 0
+   result = fclose(spathext$ + snameext$ + sextext$)
+
+# --------------------------------------------------------------------------
+# Mastercam Probing - Output
+
+prb_sav_spaces     : 0
+prb_space_length   : 0
+prb_nci_code       : 0
+sprb_space_string  : ""
+sprb_parameters    : ""
+
+prb_space_padding
+   prb_sav_spaces = spaces$
+   spaces$ = 0
+   while prb_space_length > 0, " ", prb_space_length = prb_space_length - 1
+   spaces$ = prb_sav_spaces
+
+probing_operation
+
+   sprb_opid = op_id$
+   probing_call_chook
+
+   prb_wo_updated = -1
+   prb_tool_updated = 0
+   prb_rotaxis_updated = 0
+   prb_plane_measured = 0
+
+   if prb_result = 0,
+      [
+      # Output cycle parameters
+      prb_rc = 2
+      prb_size = rbuf(prb_bufno, 0)
+      while prb_rc < prb_size,
+         [
+         sprb_parameters = rbuf(prb_bufno, prb_rc)
+         prb_nci_code = rpar(sprb_parameters, 1)
+         sprb_parameters = rbuf(prb_bufno, prb_rc)
+
+         if prb_nci_code = 9200, n$
+         if prb_nci_code = 9201,
+            [
+            gcode$ = 0
+            x$ = rpar(sprb_parameters, 3)
+            prapid$
+            ]
+         if prb_nci_code = 9202,
+            [
+            gcode$ = 1
+            x$ = rpar(sprb_parameters, 3)
+            fr_pos$ =rparsngl(sprb_parameters, 4)
+            plin$
+            ]
+         if prb_nci_code = 9203, no_spc$
+         if prb_nci_code = 9204, e$
+         if prb_nci_code = 9205,
+            [
+            sprb_space_string = drs_str(2, n$)
+            prb_space_length = strlen(sprb_space_string)
+            prb_space_padding
+            ]
+         if prb_nci_code = 9206,
+            [
+            prb_space_length = rpar(sprb_parameters, 1)
+            prb_space_padding
+            ]
+         if prb_nci_code = 9207, *sprb_parameters
+
+         if prb_nci_code = 9501, prb_tool_updated = 1
+         if prb_nci_code = 9502, prb_rotaxis_updated = 1
+         if prb_nci_code = 9503, prb_plane_measured = 1
+         if prb_nci_code = 9504, prb_wo_updated = rpar(sprb_parameters, 1)
+
+         if prb_nci_code >= 10000 & prb_nci_code <= 10999, probing_variable_usage
+
+         if prb_nci_code = 9998, exitpost$
+         ]
+
+      probing_effect
+      ]
+
+# --------------------------------------------------------------------------
+# Mastercam Probing - Implement these postblocks !
+
+prb_operation      : 0
+prb_operation_next : 0
+prb_savedn         : 0
+
+# pprep$
+probing_pprep
+   # Set probing chook path - Do not edit!
+   sprb_chook = smc_mcam_dir$ + "chooks\MastercamProbing.dll"
+
+   # Set probing target path
+   sprb_path = smc_user_dir$ + "Mill\NCI\" #"
+
+# pwrttparam$
+probing_pwrttparam
+   if prmcode$ = 15267,
+      [
+      sparameter$ = ucase(sparameter$)
+      if sparameter$ = "MASTERCAMPROBING.DLL", prb_call_dll = 1
+      ]
+
+# psof$
+probing_sof
+   if prb_call_dll,
+      [
+      sprb_mode = Generate_StartProgram
+      probing_operation
+
+      sprb_mode = CheckProbingOperationType
+      sprb_opid = op_id$
+      sprb_misc = 1
+      probing_call_chook
+
+      prb_operation_next = prb_result
+      ]
+
+# peof$
+probing_eof
+   if prb_call_dll,
+      [
+      sprb_mode = Generate_EndProgram
+      probing_operation
+      ]
+
+# ptlchg$ / ptlchg0$
+probing_before_toolchange
+   if prb_call_dll,
+      [
+      # Set current operation
+      prb_operation = prb_operation_next
+      prb_wo_updated = -1
+      prb_tool_updated = 0
+      prb_rotaxis_updated = 0
+      prb_plane_measured = 0
+
+      # Restart position
+      if and(prb_operation, Prb_Before_Tlchg),
+         [
+         sprb_mode = Generate_BeforeTlchg
+         probing_operation
+         ]
+
+      # Modify probing output
+      probing_modify
+
+      # Suppres toolchange output
+      if and(prb_operation, Prb_Suppress_Toolchg),
+         [
+         no_nc_out$ = 1
+         prb_savedn = n$
+         ]
+      ]
+
+# ptlchg$ / ptlchg0$
+probing_after_toolchange
+   if prb_call_dll,
+      [
+      if and(prb_operation, Prb_Suppress_Toolchg),
+         [
+         no_nc_out$ = 0
+         n$ = prb_savedn
+         ]
+
+      if and(prb_operation, Prb_After_Tlchg),
+         [
+         sprb_mode = Generate_AfterTlchg
+         probing_operation
+         ]
+
+      # Suppres first position output
+      if and(prb_operation, Prb_Suppress_First_Pos),
+         [
+         no_nc_out$ = 1
+         prb_savedn = n$
+         ]
+      ]
+
+# psof$ / ptlchg$ / ptlchg0$
+probing_after_coordinates
+   if prb_call_dll,
+      [
+
+      # Suppres coordinate output
+      if (and(prb_operation, Prb_Output)),
+         [
+         no_nc_out$ = 1
+         prb_savedn = n$
+         ]
+      ]
+
+# ptoolend$ / peof$
+probing_ptoolend
+   if prb_call_dll,
+      [
+      # Output probing cycle
+      if (and(prb_operation, Prb_Output)),
+         [
+         no_nc_out$ = 0
+         n$ = prb_savedn
+         sprb_mode = Generate_ProbingOutput
+         probing_operation
+
+         # Invalidate position
+         prv_xabs = xabs + 9999
+         prv_yabs = yabs + 9999
+         prv_zabs = zabs + 9999
+         prv_gcode$ = -1
+         ]
+
+      # Check if next operation is probing
+      if (and(prb_operation, Prb_Before_Tlchg) | and(prb_operation, Prb_After_Tlchg) | and(prb_operation, Prb_Output))
+       & end_op_id$ = op_id$, sprb_misc = sprb_misc + 1
+      else, if end_op_id$ <> op_id$, sprb_misc = 1
+
+      if and(prb_operation, Prb_Transition), prb_retract = 1
+      else, prb_retract = 0
+
+      if end_op_id$ > 0
+       & (end_op_id$ <> op_id$ | and(prb_operation, Prb_Before_Tlchg) | and(prb_operation, Prb_After_Tlchg) | and(prb_operation, Prb_Output)),
+         [
+         prb_operation = 0
+         prb_operation_next = 0
+
+         sprb_mode = CheckProbingOperationType
+         sprb_opid = end_op_id$
+         probing_call_chook
+
+         prb_operation_next = prb_result
+         ]
+      ]
+
+# --------------------------------------------------------------------------
+# Mastercam Probing - Variable usage
+
+fmt "OPERATION " 10 var_op
+fmt "CYCLE "     10 var_cycle
+
+var_op        : -1
+var_cycle     : -1
+svar_name     : ""
+svar_comment  : ""
+var_new_op    : 0
+var_new_cycle : 0
+
+probing_variable_usage
+   if prb_nci_code = 10000, n$, "(PROBING VARIABLES START)", e$
+
+   if prb_nci_code = 10501, var_op = rparsngl(sprb_parameters, 1)
+   if prb_nci_code = 10502, var_cycle = rparsngl(sprb_parameters, 1)
+   if prb_nci_code = 10504, svar_name = ucase(sprb_parameters)
+   if prb_nci_code = 10505, svar_comment = ucase(sprb_parameters)
+   if prb_nci_code = 10699,
+      [
+      var_new_op = (var_op <> prv_var_op)
+      var_new_cycle = (var_cycle <> prv_var_cycle)
+
+      n$, "("
+
+      if var_new_op,
+         [
+         *var_op
+         sprb_space_string = drs_str(2, var_op)
+         prb_space_length = 13 - strlen(sprb_space_string)
+         ]
+      else, prb_space_length = 14
+      prb_space_padding
+      "|"
+
+      if var_new_cycle | var_new_op,
+         [
+         *var_cycle
+         sprb_space_string = drs_str(2, var_cycle)
+         prb_space_length = 8 - strlen(sprb_space_string)
+         ]
+      else, prb_space_length = 9
+      prb_space_padding
+      "|"
+
+      *svar_name, "=", *svar_comment
+
+      ")", e$
+      ]
+
+   if prb_nci_code = 10999, n$, "(PROBING VARIABLES END)", e$
+
+# --------------------------------------------------------------------------
+# Mastercam Probing - Machine/Post specific code
+
+# Handle the effect of probing cycles
+probing_effect
+
+   # Work offset modified by probing cycle - Invalidate work offset variable if current work offset is updated
+   if prb_wo_updated >= 0,
+      [
+
+      # External offset updated
+      #    prb_wo_updated = 0
+
+      # G54-G59 updated
+      if (prb_wo_updated >= 1 & prb_wo_updated <= 6) & (prb_wo_updated - 1) = prv_workofs$,
+         [
+         prv_workofs$ = -1
+         prv_g_wcs = -1
+         ]
+
+      if prb_wo_updated >= 7 & (prb_wo_updated - 1) = prv_workofs$,
+         [
+         # G54.1 P# updated
+         prv_workofs$ = -1
+         #prv_p_wcs = -1
+		 prv_origine_bis = -1
+         ]
+
+      ]
+
+   # Rotary axis ZERO modified by probing cycle - Invalidate current rotary axis position
+   if prb_rotaxis_updated,
+      [
+      #prv_cabs     = cabs + 0.1
+	  prv_AxeRotAff = AxeRotAff + 0.1
+      				#prv_indx_out = indx_out + 0.1
+      ]
+
+probe_m1 : 0
+probe_m2 : 0
+probe_m3 : 0
+probe_m4 : 0
+probe_m5 : 0
+probe_m6 : 0
+probe_m7 : 0
+probe_m8 : 0
+probe_m9 : 0
+
+aaxisx       : 1     #A axis rotation vector constant
+baxisx       : 0     #B axis rotation vector constant
+caxisx       : 0     #C axis rotation vector constant
+
+rot_ccw_pos  : 0     #SET_BY_MD Axis signed dir, 0 = CW positive, 1 = CCW positive
+
+
+# Modify probing cycles based on machine/post settings and configuration
+probing_modify
+
+   #if and(prb_operation, Prb_Active) & fmtrnd(cabs),
+   if and(prb_operation, Prb_Active) & fmtrnd(AxeRotAff),
+      [
+      probing_write_config_start
+
+      # Vertical machine
+      #if vmc,
+	  if diviseur = 1,
+         [
+         probe_m1 = 1
+         probe_m2 = 0
+         probe_m3 = 0
+         probe_m4 = 0
+         probe_m5 = 1
+         probe_m6 = 0
+         probe_m7 = 0
+         probe_m8 = 0
+         probe_m9 = 1
+         ]
+
+      # Horizontal machine
+      if diviseur = 2,
+         [
+         probe_m1 = 1
+         probe_m2 = 0
+         probe_m3 = 0
+         probe_m4 = 0
+         probe_m5 = 0
+         probe_m6 = 1
+         probe_m7 = 0
+         probe_m8 = -1
+         probe_m9 = 0
+         ]
+
+      if diviseur = 1, axisx$ = vequ(aaxisx)		#if rot_on_x = 1,
+      else, if diviseur = 2, axisx$ = vequ(baxisx)	#if rot_on_x = 2,
+      else, if diviseur = 3, axisx$ = vequ(caxisx)	#if rot_on_x = 3,
+
+      probe_m1 = rotp(AxeRotAff * fsg((rot_ccw_pos = 0), -1 , 1), probe_m1)
+      probe_m4 = rotp(AxeRotAff * fsg((rot_ccw_pos = 0), -1 , 1), probe_m4)
+      probe_m7 = rotp(AxeRotAff * fsg((rot_ccw_pos = 0), -1 , 1), probe_m7)
+
+      sprb_parameters =                   no2str(probe_m1) + " " + no2str(probe_m2) + " " + no2str(probe_m3) + " "
+      sprb_parameters = sprb_parameters + no2str(probe_m4) + " " + no2str(probe_m5) + " " + no2str(probe_m6) + " "
+      sprb_parameters = sprb_parameters + no2str(probe_m7) + " " + no2str(probe_m8) + " " + no2str(probe_m9)
+      "11004: ", no_spc$, *sprb_parameters, e$
+
+      probing_write_config_end
+
+      sprb_mode = ModifyProbing
+      sprb_opid = op_id$
+      probing_call_chook
+      ]
+
+# --------------------------------------------------------------------------
+
+#<Mastercam_Probing version="2.2">
+#	<Settings>
+#		<Post>
+#			<ControlName>Fanuc_Renishaw</ControlName>
+#			<ControlSubname>Mill</ControlSubname>
+#			<ControlLanguage>Francais</ControlLanguage>
+#			<TooltipCenter>No</TooltipCenter>
+#			<DprintOnProbeCommands>No</DprintOnProbeCommands>
+#		</Post>
+#		<OutputFormat>
+#			<Integer>1 0</Integer>
+#			<Real>0.4</Real>
+#			<Coord>0.4</Coord>
+#			<Angle>0.4</Angle>
+#			<Vector>0.8</Vector>
+#		</OutputFormat>
+#		<UseDeviationDataFormat>Yes</UseDeviationDataFormat>
+#	</Settings>
+#</Mastercam_Probing>
+
+#endregion
+
 
 [ENDBIN]
 
