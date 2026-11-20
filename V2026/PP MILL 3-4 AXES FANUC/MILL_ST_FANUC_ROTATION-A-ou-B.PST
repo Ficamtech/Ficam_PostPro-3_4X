@@ -77,6 +77,7 @@ coefficient_G0		: 10	# Facteur de correction des rapides en --> accélération &
 # - RENVOI D'ANGLE
 #					FIXE MANUEL --> OUI
 #				CIRCULAIRE AUTO --> OUI
+# - PALPAGES *PROBIN-MC*		--> OUI
 # ---------------------------------------- INFOS
 # mi1$ sans
 # mi2$ utilisé pour FORCER le Z sécu de l'op si la config est remonter en Z HAUT 	
@@ -232,7 +233,7 @@ lire_def_machine    = 1     # 1 = Lire les valeurs de la def machine / armoire -
 Systeme_rot_plans   = 0     # SystEme de gestion des différentes valeurs lors d'une rotation
                                 # 0  = pas de calculs --> origine gEnEralement **PAR FACE/G55/G56... ou **au centre de la palette
                                 # 1  = calculs AUTO "G68" --> origine oU on veut
-                                # 2X =	Calcul suivant une transition de l'origine CALCULé
+                                # 2 =	Calcul suivant une transition de l'origine CALCULé
 									# 21 = utilise le sous-programme O8000 pour calculer automatiquement les origines pour chaque face
                                     	# utilise_O8000 --> G54 au dEbut et ensuite G55 calculE, Exemple : G54 G90 B122.; M98 P8000 ...
                                     	# Fichier contenant le O8000 à integrer dans la CN et valider
@@ -287,8 +288,8 @@ Type_UGV            = 3    	# si UGV = 0 --> NON utilisé
 										# fonction pour usinage des formes dans les coins, idem au "G9" 
 									# P = Contrôle de l'usinage lisse
 									# R = Contrôle de coin lisse
-								# 8 = G61.1/G5 P2 & G5 P0/G64	Mazak Option	A TESTER --> fichier en exemple
-								# 9 = G61/G64					Mazak Option
+								# 8 = G61.1/G5 P2 //CODE CN// G5 P0/G64		Mazak Option A TESTER --> fichier en exemple
+								# 9 = G61/G64								Mazak Classique
 								
 CN_textes           = 1     # Autorise les commentaires texte
 
@@ -327,8 +328,8 @@ compteur_pieces			= 1	#
 
 percages_formats_Q		= 1	#Format d'affichage pour Q
 								# 1 = Q --> 1.234 mm
-									# 2 = Q --> 10
-									# 3 = Q --> 100
+								# 2 = Q --> 10
+								# 3 = Q --> 100
 								# 4 = Q --> 1234
 
 dwell_tempo				= 1 # Format pour les temporisations
@@ -428,7 +429,7 @@ spdlsel = fsg3(ss$)
 fstrsel  sm_00 spdlsel spdlon 12 -1
 #-------------------------------------------------------
 # GESTION DES TEXTES OPTIONNELS
-s_texte_0     : ""
+s_texte_0    : ""
 s_texte_1    : "M0"                     	#N° 1
 s_texte_2    : "M1"                     	#N° 2
 s_texte_3    : "( BLOC OPTIONNEL ON"
@@ -475,7 +476,7 @@ s_reset_AB			: ""	#"M31 (REMISE A ZERO AXE A-B)"		# HURCO M31
 #region autres switches
 #infos communes AVEC LECTURE DEFINITION de la CN             et SWITCH sans lecture de la DEFINITION de la CN
 useaxe          : -999    	# -999 = mode AUTO (DEF MACHINE) -- (utiliser l'axe A/B 1=oui 0=non)
-sens_AB        	: 1     	# pour inverser les calculs de l'axe A/B -1
+sens_A_B        : 1     	# pour inverser les calculs de l'axe A/B -1
 diviseur        : -1    	# diviseur tourne autour de X=1-->A autour de Y=2-->B // DEF MACHINE=-1
 
 # ZONE de FORMULES  si : uniquement au dédut si = constante
@@ -607,6 +608,10 @@ fmt  ""       		2  stck_ur_x        #Stock upper right corner X value
 fmt  ""       		2  stck_ur_y        #Stock upper right corner Y value
 fmt  "DIAM. EXTER:" 2  stck_cyl_dia     #Stock diameter for Cylindrical stock
 fmt  "DIAM. INTER:" 2  stck_cyl_dia_inter     #Stock diameter for Cylindrical stock
+
+fmt  "LONG. = "     2  Longueur_brut
+fmt  "LARG. = "     2  Largeur_brut
+fmt  "EPAIS. = "    2  Epaisseur_brut
 #------------------------------------------------------------------------------------------------------------------
 #   AFFECTATION DES VARIABLES FLAG
 fmt         4 numcoment         # flag pour Numeroter les lignes de commentaire
@@ -921,8 +926,8 @@ fmt  "P"        4 tempo
 #-------------------- Axe A  ------------------------------------------
 fmt         	3 useaxe        # flag pour utiliser le 4eme axe
 fmt  ""     	2 axe_AB        # POSITION pour rotation plateau en ABS
-fmt  "B"       11 axe_ABi         # POSITION pour rotation plateau en INCREMENTAL
-fmt  "S"     	2 sens_AB      	# pour inverser le sens de l'axe
+fmt  "B"       11 axe_ABi       # POSITION pour rotation plateau en INCREMENTAL
+fmt  "S"     	2 sens_A_B      # pour inverser le sens de l'axe
 fmt  ""     	2 axeAB_subs    # rotation pour continue substitution en ABS
 
 fmt  "MAB"     	2 memo_AB_subs  # Memo du A/B du plan pour Ajout/soustraire
@@ -932,7 +937,7 @@ fmt         	9 outil_paramT1
 fmt  "Z"     	2 zdev          # Z pour continue substitution en ABS
 fmt  "Z"		11 zdevi        # Z pour continue substitution en INCREMENTAL
 fmt         	1 old_rotaxis   # memo de rotaxis$
-fmt 	"A"     2 old_axe_AB      # memo de l ancien A
+fmt 	"A"     2 old_axe_AB    # memo de l ancien A
 fmt "Sens"     	2 sensA         # sens de rotation de A
 fmt  "A"     	2 epsi          # Delta de rotation de l'axe A
 fmt  "Ntr"  	2 nbrtour       # nombre de tour realise
@@ -1704,10 +1709,8 @@ pprep$      # affectation des variables avant debut traitememt post pro
     if erreur <> 0, [
         result = mprint(serreur, 2)
         exitpost$
-        ]
-    
+        ] 
 	rot_ccw_pos = rot_dir	# Probing
-	
 	# bloc init post-pro en remplacement de la def armoire
     #pdebug
     if lire_def_machine = 0, p_force_config_pp, p_cycles_valides
@@ -2364,9 +2367,9 @@ pmachineinfo$    # lecture des parametre de def armoire et def machine
         if diviseur > 3, diviseur = diviseur - 6                    # ne garder que x y z      
 		]
     if prmcode$ = 17402,    [                                       # sens de l'axe rotatif -1=trigo 1=horaire
-        sens_AB = rpar(sparameter$, 1)
-        if sens_AB = 0, sens_AB = 1                               # variable sens pour le post pro
-        else, sens_AB = -1
+        sens_A_B = rpar(sparameter$, 1)
+        if sens_A_B = 0, sens_A_B = 1                               # variable sens pour le post pro
+        else, sens_A_B = -1
         ]
 	if prmcode$ = 17598, nbr_outil = rpar(sparameter$, 1)           # nombre d'outils du changeur de la def machine
     if prmcode$ = 17932, s_axe_rot_label = sparameter$              # 17391 AXE rotatif (ABC) (NOM DE L'axe -- PAS le LABEL)	
@@ -2383,9 +2386,9 @@ p_lire_axes   # Lecture des parametres de la combinaison d'axes uniquement
     #rd_mch_ent_no$ = -2                        # forcer la lecture de toute la def machine -1 que la combinaison d'axe -2 que la base machine 0
     #rd_cd$                                     # lecture de la def armoire
     if lire_def_machine = 1, rd_md$             # lecture de la def machine
-    result = nwadrs(s_axe_rot_label, axe_AB)      # affectation du nom de l'axe rotatif en ABS
+    result = nwadrs(s_axe_rot_label, AxeRotAff) # affectation du nom de l'axe rotatif en ABS
     #s_axe_rot_label = "I" + s_axe_rot_label    # affectation du nom de l'axe rotatif en INC
-    #result = nwadrs(s_axe_rot_label, axe_ABi)    # affectation du nom de l'axe rotatif en INC
+    #result = nwadrs(s_axe_rot_label, axe_ABi)  # affectation du nom de l'axe rotatif en INC
     p_test_machine
     old_syncaxis = syncaxis$
 
@@ -2423,7 +2426,7 @@ p_affiche_infos_config_armoire
         "spalette: ", spalette, e$
         "type_composant ", *type_composant, e$
         "INFOS CONFIG GROUPE MACHINE : diviseur +X=1,+Y=2,+Z=3,-X=7,-Y=8,-Z=9: : ", *diviseur, e$
-        "sens de l'axe rotatif 0=trigo 1=horaire: ", *sens_AB, e$
+        "sens de l'axe rotatif 0=trigo 1=horaire: ", *sens_A_B, e$
         "nbr_outil: ", *nbr_outil, e$
         "s_axe_rot_label NOM: ", s_axe_rot_label, e$
         ]
@@ -2703,12 +2706,12 @@ prot0$  #   Tool plan view matrix du gcode 1014
 prot$
 #region modif Cédric
 # var a exposer pour 4ieme axe
-VectAxe_X : -1 
+VectAxe_X : 0 
 VectAxe_Y : 0 
 VectAxe_Z : 0
 axerot_Cal : 0
 AxeSRot_IS_Linear : yes$
-sAdreeseAxeRot : "A"
+#sAdreeseAxeRot : "B"
 UsePlanerotation : no$ # utiliser les G68.2
 Convention : 0 #0 = ZXZ(Euler) #1=XYZ(RPY)
 
@@ -2915,90 +2918,106 @@ pcalConvention(Conv)
     ]
 Usi5X: no$
 pCalAxe(type)
-    result = nwadrs(sAdreeseAxeRot,AxeRotAff)
-    Old_AxerotCal = axerot_Cal 
-    if type = 1, # calcul du positionne
-    [
-        if Usi5X,
-        [
-            tx = vtoolx$ # utilise vtool pour compatibilite percage 5X
-            ty = vtooly$
-            tz = vtoolz$
-            normV = sqrt(tx^2 + ty^2 + tz^2)
-            tx = tx / normV
-            ty = ty / normV
-            tz = tz / normV
-         ]
-        else,
-        [
-            tx = m7$
-            ty = m8$
-            tz = m9$
-        ]
-        norm = sqrt(VectAxe_X^2 + VectAxe_Y^2 + VectAxe_Z^2)
+    if Mode_reglage_PP = 0, "--> pCalAxe", e$
+	if rotation_axe = 1, 
+		[ 
+		result = nwadrs(s_axe_rot_label, AxeRotAff)
+	    Old_AxerotCal = axerot_Cal 	
+	    if type = 1, # calcul du positionne
+	    [
+	        if Usi5X,
+	        [
+	            tx = vtoolx$ # utilise vtool pour compatibilite percage 5X
+	            ty = vtooly$
+	            tz = vtoolz$
+	            normV = sqrt(tx^2 + ty^2 + tz^2)
+	            tx = tx / normV
+	            ty = ty / normV
+	            tz = tz / normV
+	         ]
+	        else,
+	        [
+	            tx = m7$
+	            ty = m8$
+	            tz = m9$
+	        ]
+	        norm = sqrt(VectAxe_X^2 + VectAxe_Y^2 + VectAxe_Z^2)
 
-        vC_n_x = (VectAxe_X / norm) *-1
-        vC_n_y = (VectAxe_Y / norm) *-1
-        vC_n_z = (VectAxe_Z / norm) *-1
+			#"--> ", *VectAxe_X, *VectAxe_Y, *VectAxe_Z, *vC_n_x, *vC_n_y, *normV, *norm, e$
+			
+	        vC_n_x = (VectAxe_X / norm) *-1
+	        vC_n_y = (VectAxe_Y / norm) *-1
+	        vC_n_z = (VectAxe_Z / norm) *-1
 
-        q_x = 0 
-        q_y = 0
-        q_z = 1
+	        q_x = 0 
+	        q_y = 0
+	        q_z = 1
 
-        sq = vC_n_x * q_x + vC_n_y * q_y + vC_n_z  * q_z
-        qpar_x = sq * vC_n_x
-        qpar_y = sq * vC_n_y
-        qpar_z = sq * vC_n_z
+	        sq = vC_n_x * q_x + vC_n_y * q_y + vC_n_z  * q_z
+	        qpar_x = sq * vC_n_x
+	        qpar_y = sq * vC_n_y
+	        qpar_z = sq * vC_n_z
 
-        qperp_x = q_x - qpar_x
-        qperp_y = q_y - qpar_y
-        qperp_z = q_z - qpar_z
+	        qperp_x = q_x - qpar_x
+	        qperp_y = q_y - qpar_y
+	        qperp_z = q_z - qpar_z
 
-        sv = vC_n_x * tx + vC_n_y * ty + vC_n_z * tz
-        vpar_x = sv * vC_n_x
-        vpar_y = sv * vC_n_y
-        vpar_z = sv * vC_n_z
+	        sv = vC_n_x * tx + vC_n_y * ty + vC_n_z * tz
+	        vpar_x = sv * vC_n_x
+	        vpar_y = sv * vC_n_y
+	        vpar_z = sv * vC_n_z
 
-        vperp_x = tx - vpar_x
-        vperp_y = ty - vpar_y
-        vperp_z = tz - vpar_z
+	        vperp_x = tx - vpar_x
+	        vperp_y = ty - vpar_y
+	        vperp_z = tz - vpar_z
 
-        norm_q = sqrt(qperp_x * qperp_x + qperp_y * qperp_y + qperp_z * qperp_z)
-        norm_v = sqrt(vperp_x * vperp_x + vperp_y * vperp_y + vperp_z * vperp_z)
-        den = norm_q * norm_v
-        if den <> 0,
-        [
-            cosB = (qperp_x * vperp_x + qperp_y * vperp_y + qperp_z * vperp_z) / den
-            cr_x = qperp_y * vperp_z - qperp_z * vperp_y
-            cr_y = qperp_z * vperp_x - qperp_x * vperp_z
-            cr_z = qperp_x * vperp_y - qperp_y * vperp_x
+	        norm_q = sqrt(qperp_x * qperp_x + qperp_y * qperp_y + qperp_z * qperp_z)
+	        norm_v = sqrt(vperp_x * vperp_x + vperp_y * vperp_y + vperp_z * vperp_z)
+	        den = norm_q * norm_v
+	        if den <> 0,
+	        [
+	            cosB = (qperp_x * vperp_x + qperp_y * vperp_y + qperp_z * vperp_z) / den
+	            cr_x = qperp_y * vperp_z - qperp_z * vperp_y
+	            cr_y = qperp_z * vperp_x - qperp_x * vperp_z
+	            cr_z = qperp_x * vperp_y - qperp_y * vperp_x
 
-            sinB = (vC_n_x * cr_x + vC_n_y  * cr_y + vC_n_z * cr_z) / den
-            axerot_Cal = atan2(sinB,cosB)
-            if AxeSRot_IS_Linear = no$,
-            [
-                 if axerot_Cal > 180, axerot_Cal = axerot_Cal -360
-            ]
-        ]
-        else,
-        [
-            axerot_Cal = 0
-        ]
-    ]
-    if type = 2, # calcul de la substitution
-    [
-        if rotary_axis$ = 2, #substitu X
-        [
-            axerot_Cal = (-x$ * 360 / (pi$ * rotdia$) + 90) * VectAxe_Y
-        ]
-        if rotary_axis$ = 1, #substitu Y
-        [
-            axerot_Cal = (y$ * 360 / (pi$ * rotdia$) + 90) * VectAxe_X
-        ]
-    ]
-    delta_rot = Old_AxerotCal -  axerot_Cal
-    AxeRotAff = axerot_Cal
-    if AxeSRot_IS_Linear , pCont
+	            sinB = (vC_n_x * cr_x + vC_n_y  * cr_y + vC_n_z * cr_z) / den
+	            axerot_Cal = atan2(sinB,cosB)
+	            if AxeSRot_IS_Linear = no$,
+	            [
+	                 if axerot_Cal > 180, axerot_Cal = axerot_Cal -360
+	            ]
+	        ]
+	        else,
+	        [
+	            axerot_Cal = 0
+	        ]
+	    ]
+	    if type = 2, # calcul de la substitution
+	    [
+	    #"--> ", *VectAxe_X, *VectAxe_Y, *VectAxe_Z, " ", *rotaxis$, e$		   	
+	        if rotaxis$ = -1 | rotaxis$ = 1,    # ROTATION SUR Y SUBSTITUTION DE X
+	        [
+	            # ROTATION SUR X	 
+				#if rotaxis$ = -1, 		#TYPE MC : SENS TRIGO sur Y 
+				#if rotaxis$ = 1, 		#TYPE MC : SENS HORAIRE sur Y
+				#axerot_Cal = (y$ * 360 / (pi$ * rotdia$) + 90) * VectAxe_Y
+				axerot_Cal = (x$ * 360 / (pi$ * rotdia$)) * VectAxe_Y
+	        ]
+			if rotaxis$ = -2 | rotaxis$ = 2,    # ROTATION SUR X SUBSTITUTION DE Y
+	        [
+	            # ROTATION SUR Y	
+				#if rotaxis$ = -2, 		#TYPE MC : SENS TRIGO sur X 
+				#if rotaxis$ = 2, 		#TYPE MC : SENS HORAIRE sur X
+				#axerot_Cal = (-x$ * 360 / (pi$ * rotdia$) + 90) * VectAxe_X
+				axerot_Cal = (y$ * 360 / (pi$ * rotdia$)) * VectAxe_X
+	        ]
+	    ]
+	    delta_rot = Old_AxerotCal - axerot_Cal
+		axerot_Cal = axerot_Cal * sens_A_B 		# Sens de A ou B
+	    AxeRotAff = axerot_Cal 
+	    if AxeSRot_IS_Linear, pCont
+		]
 pCont  
     if abs (delta_rot) > 180,
     [
@@ -3017,24 +3036,35 @@ delta_rot : 0
 Old_AxerotCal : 0
 pplane
     pcalConvention(Convention)
-    if Convention = 1 , splane = "G68.2 P1"
+    if Convention = 1, splane = "G68.2 P1"
     else, splane = "G68.2 P0"
-    n$ splane , *tox4$,*toy4$,*toz4$, *angle_autour_X, *angle_autour_Y, *angle_autour_Z ,e$
+    n$, splane , *tox4$, *toy4$, *toz4$, *angle_autour_X, *angle_autour_Y, *angle_autour_Z ,e$
 p_rot_ptlchg # affichage de l'angle au changement d'outil pour positionné
-    if mi7$ = 1, bloque = 2, n$, sbloque, e$
-    n$, *AxeRotAff ,e$
-    if mi7$ = 1, bloque = 1, n$, sbloque, e$
-    if UsePlanerotation, pplane
+    if Mode_reglage_PP = 0, n$, "--> p_rot_ptlchg", e$
+    #Perreur_origine_plan
+    Perreur_nom_RUD
+	if rotation_axe = 1,
+	[
+		if mi7$ = 1, bloque = 2, n$, sbloque, e$
+		p_affiche_type_rot
+	    if mi7$ = 1, bloque = 1, n$, sbloque, e$
+	    if UsePlanerotation, pplane
+	]
 p_rot_tlchg0
-    if delta_rot <> 0,
-    [
-        p_degage_4_axes                                 	# Dégagement machine avant la rotation de l'axe A
-        if mi7$ = 1, bloque = 2, n$, sbloque, e$        	# déblocage de l'axe A/B
-        n$, *AxeRotAff ,e$
-        if mi7$ = 1, bloque = 1, n$, sbloque, e$        	# blocage de l'axe A/B 
-        if UsePlanerotation, pplane
-        rot_tlchg_zero = 1
-    ]
+    #Perreur_origine_plan
+    Perreur_nom_RUD
+	if rotation_axe = 1,
+	[
+		if delta_rot <> 0,
+	    [
+	        p_degage_4_axes                                 	# Dégagement machine avant la rotation de l'axe A
+	        if mi7$ = 1, bloque = 2, n$, sbloque, e$        	# déblocage de l'axe A/B
+			p_affiche_type_rot
+	        if mi7$ = 1, bloque = 1, n$, sbloque, e$        	# blocage de l'axe A/B 
+	        if UsePlanerotation, pplane
+	        rot_tlchg_zero = 1		
+		]
+	]
 pdefineBreak
     if rotaxis$ <> 0,
     [
@@ -3049,11 +3079,11 @@ pdefineBreak
     ]
 #endregion 
 
-p_calcul_rot_posit   # calcul de l'axe A en positionné
+p_calcul_rot_posit_old   # calcul de l'axe A en positionné
     @old_axe_AB, @nbrtour
     if diviseur = 1, axe_AB = atan2(m8$,m9$) + (360 * nbrtour)    # pour diviseur tourne autour de X
     if diviseur = 2, axe_AB = atan2(m7$,m9$) + (360 * nbrtour)    # pour diviseur tourne autour de Y
-    axe_AB = axe_AB * sens_AB                                      # prise en compte du sens de rotation
+    axe_AB = axe_AB * sens_A_B                                      # prise en compte du sens de rotation
     epsi = axe_AB - old_axe_AB                                      # variation angulaire
     sensA = 0
     if epsi > 0, sensA = 1                                      # sens de la variation
@@ -3148,36 +3178,36 @@ s_M_ROT_NE_2 : ""
 
 p_affiche_type_rot
     if Systeme_rot_plans = 0, [    #pas de calculs "TOUJOURS EN G54"
-        if incremental = 0, n$, sgcode, sinc_abs, *axe_AB, !axe_ABi, e$
-        else, n$, sgcode, sinc_abs, !axe_AB, *axe_ABi, e$
+        if incremental = 0, n$, sgcode, sinc_abs, *AxeRotAff ,!axe_ABi, e$
+        else, n$, sgcode, sinc_abs, !AxeRotAff, *axe_ABi, e$
         ]
     if Systeme_rot_plans = 1, [    #PLANS "G68..."
-        if incremental = 0, n$, sgcode, sinc_abs, "G68", *axe_AB, !axe_ABi, e$
-        else, n$, sgcode, sinc_abs, !axe_AB, "G68", *axe_ABi, e$
+        if incremental = 0, n$, sgcode, sinc_abs, "G68", *AxeRotAff, !axe_ABi, e$
+        else, n$, sgcode, sinc_abs, !AxeRotAff, "G68", *axe_ABi, e$
         n$, p_ori_usi, e$
         ]
     if Systeme_rot_plans = 2, [    #SOUS-PROGRAMME de calcul --> usi en G55
-        if incremental = 0, n$, sgcode, sinc_abs, *axe_AB, !axe_ABi, e$
-        else, n$, sgcode, sinc_abs, !axe_AB, *axe_ABi, e$
+        if incremental = 0, n$, sgcode, sinc_abs, *AxeRotAff, !axe_ABi, e$
+        else, n$, sgcode, sinc_abs, !AxeRotAff, *axe_ABi, e$
         n$, "M98 P8000", e$
         n$, s_com_open, "G55 ACTIF",  s_com_close, e$
         ]
-    if Systeme_rot_plans = 3, [    #1 ORIGINE PAR ANGLE
-        if incremental = 0, n$, sgcode, sinc_abs, s_com_open, *axe_AB, s_com_close, !axe_ABi, e$
-        else, n$, sgcode, sinc_abs, !axe_AB, s_com_open, *axe_ABi, s_com_close, e$
+	if Systeme_rot_plans = 3, [    #1 ORIGINE PAR ANGLE
+        if incremental = 0, n$, sgcode, sinc_abs, s_com_open, *AxeRotAff, s_com_close, !axe_ABi, e$
+        else, n$, sgcode, sinc_abs, !AxeRotAff, s_com_open, *axe_ABi, s_com_close, e$
         n$, p_ori_usi, e$
         ]
     if Systeme_rot_plans = 4, [    #MODULE DE ROTATION A PART "automate" --> FONCTION "M" -- 1 ORIGINE PAR ANGLE
         n$, "M21", s_com_open, , "ROTATION AXE A", s_com_close, e$
-        if incremental = 0, n$, sgcode, sinc_abs, s_com_open, *axe_AB, s_com_close, !axe_ABi, e$
-        else, n$, sgcode, sinc_abs, !axe_AB, s_com_open, *axe_ABi, s_com_close, e$
+        if incremental = 0, n$, sgcode, sinc_abs, s_com_open, *AxeRotAff, s_com_close, !axe_ABi, e$
+        else, n$, sgcode, sinc_abs, !AxeRotAff, s_com_open, *axe_ABi, s_com_close, e$
         n$, "G4 X2.", e$
         ]
     if Systeme_rot_plans = 5, [    # 5 = FONCTION "M" en RELATIF **chaque M=90°** module de rotation à part "capteu automate" (1 ORIGINE PAR ANGLE)
-        if axe_AB = -270, axe_AB = -90
-        if axe_AB = 270, axe_AB = -90
-        if axe_AB = -180, axe_AB = 180
-        if epsi <>0, n$, s_com_open, "ROTATION AXE :", *axe_AB, " ANCIEN :", *old_axe_AB , s_com_close, e$
+        if AxeRotAff = -270, AxeRotAff = -90
+        if AxeRotAff = 270, AxeRotAff = -90
+        if AxeRotAff = -180, AxeRotAff = 180
+        if delta_rot <> 0, n$, s_com_open, "ROTATION AXE :", *AxeRotAff, " ANCIEN :", *old_axe_AB , s_com_close, e$
 
         if Var_16_question > 0, [    # ACTIVATION DE L'UTILISATION DE LA PALETTE "A"... CODES M"
             s_M_ROT_PO_1 = s_M_ROT_PO_P1_1
@@ -3192,30 +3222,30 @@ p_affiche_type_rot
             s_M_ROT_NE_2 = s_M_ROT_NE_P2_2
             ]
         #ROTATION HORAIRE
-        if old_axe_AB = 0 & axe_AB = 90, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$                                                 #0      --> 90
-        if old_axe_AB = 0 & axe_AB = 180, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$    #0      --> 180
-        if old_axe_AB = 90 & axe_AB = 180, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$                                               #90     --> 180
-        if old_axe_AB = 180 & axe_AB = -90, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$                                              #180    --> -90
-        if old_axe_AB = 180 & axe_AB = 0, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$    #180    --> 0
-        if old_axe_AB = -90 & axe_AB = 0, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$                                                #-90    --> 0
+        if old_axe_AB = 0 & AxeRotAff = 90, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$                                                 #0      --> 90
+        if old_axe_AB = 0 & AxeRotAff = 180, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$    #0      --> 180
+        if old_axe_AB = 90 & AxeRotAff = 180, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$                                               #90     --> 180
+        if old_axe_AB = 180 & AxeRotAff = -90, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$                                              #180    --> -90
+        if old_axe_AB = 180 & AxeRotAff = 0, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$    #180    --> 0
+        if old_axe_AB = -90 & AxeRotAff = 0, n$, s_M_ROT_PO_1, e$, n$, s_M_ROT_PO_2, e$                                                #-90    --> 0
 
         #ROTATION ANTI-HORAIRE
-        if old_axe_AB = 0 & axe_AB = -90, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$                                                #0      --> -90
-        if old_axe_AB = -90 & axe_AB = 180, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$                                              #-90    --> -180
-        if old_axe_AB = 90 & axe_AB = 0, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$                                                 #90     --> 0
-        if old_axe_AB = 180 & axe_AB = 90, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$                                               #180    --> 90
-        if old_axe_AB = -90 & axe_AB = 90, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$   #-90    --> 90
-        if old_axe_AB <> axe_AB, n$, "G04", "P1000", e$
-        old_axe_AB = axe_AB
+        if old_axe_AB = 0 & AxeRotAff = -90, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$                                                #0      --> -90
+        if old_axe_AB = -90 & AxeRotAff = 180, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$                                              #-90    --> -180
+        if old_axe_AB = 90 & AxeRotAff = 0, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$                                                 #90     --> 0
+        if old_axe_AB = 180 & AxeRotAff = 90, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$                                               #180    --> 90
+        if old_axe_AB = -90 & AxeRotAff = 90, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$, n$, s_M_ROT_NE_1, e$, n$, s_M_ROT_NE_2, e$   #-90    --> 90
+        if old_axe_AB <> AxeRotAff, n$, "G04", "P1000", e$
+        old_axe_AB = AxeRotAff
         ]
 #endregion
 
 #region calculs_et_affichage_rotations_en_continu_et_substitution
 #------------------- 4 Axes continue en substitution d'axe ---------------------------------------
-p_calcul_AB_pos_Subs  # calcul de l'axe A/B en substitution
+p_calcul_AB_pos_Subs_old  # calcul de l'axe A/B en substitution
     @x$, @y$
-    if diviseur = 1, axeAB_subs = (y$ * 360 / (pi$ * rotdia$)) * sens_AB       # pour 4eme axe autour de X (substituer Y)
-    if diviseur = 2, axeAB_subs = (x$ * 360 / (pi$ * rotdia$)) * sens_AB       # pour 4eme axe autour de Y (substituer X)
+    if diviseur = 1, axeAB_subs = (y$ * 360 / (pi$ * rotdia$)) * sens_A_B       # pour 4eme axe autour de X (substituer Y)
+    if diviseur = 2, axeAB_subs = (x$ * 360 / (pi$ * rotdia$)) * sens_A_B       # pour 4eme axe autour de Y (substituer X)
     if diviseur = 1, result = nwadrs(s_axe_rot_A, axeAB_subs)
     if diviseur = 2, result = nwadrs(s_axe_rot_B, axeAB_subs)
     p_Z_dev
@@ -3246,7 +3276,7 @@ p_Z_dev  # calcul du Z en substitution
     zdev  = z$ +(rotdia$ /2)    # Z pour continue substitution en ABS
     zabs = zdev
 
-p_Apos_affiche_subs  # affichage de l'angle au chg outil nul pour continue
+p_Apos_affiche_subs_old  # affichage de l'angle au chg outil nul pour continue
     if useaxe <> 0, [
         @old_axe_AB, @axe_AB
         epsi = old_axe_AB - axe_AB
@@ -3262,19 +3292,19 @@ p_Apos_affiche_subs  # affichage de l'angle au chg outil nul pour continue
     old_axe_AB = axe_AB
 
 #------------------- 4 Axes continue en fonctions 5 Axes ---------------------------------------
-p_axeAB_pmx  # Affichage de l'axe A
+p_axeAB_pmx_old  # Affichage de l'axe A
     #*old_axeA1, *axeA1
     delta_axeA1 = axeA1 - old_axeA1
     if delta_axeA1 >  180, delta_axeA1 = delta_axeA1 - 360
     if delta_axeA1 <  -180,delta_axeA1 = delta_axeA1 + 360
     axeA1_dep = axeA1_dep + delta_axeA1
     old_axeA1 = axeA1
-    axe_AB = axeA1_dep * sens_AB
-    nbrtour = int (axe_AB / 360) * sens_AB
+    axe_AB = axeA1_dep * sens_A_B
+    nbrtour = int (axe_AB / 360) * sens_A_B
     if incremental = 0, if debutpmx = 1, *axe_AB, !axe_ABi, else, axe_AB, !axe_ABi
     if incremental = 1, if debutpmx = 1, !axe_AB, *axe_ABi, else, !axe_AB, axe_ABi
 
-p_calcul_rot_pmx  # Calcul de l'axe A
+p_calcul_rot_pmx_old  # Calcul de l'axe A
     if Mode_reglage_PP = 0, "VOIR p_calcul_rot_pmx ", *x$, *y$, *z$, *u$, *v$, *w$, e$
     vx = u$ - x$
     vy = v$ - y$
@@ -3315,18 +3345,21 @@ p_corr_5x
 		] 
 	
 pmx$        # Gestion 4 axes continues avec fonction 5 axes
-   Usi5X = yes$
-    if Mode_reglage_PP = 0, n$, "--> pmx$", *x$, *y$, *z$, *zr$, *xnci$, *ynci$, *znci$, *u$, *v$, *w$,
-        *m9$, *m8$, *m7$, *m6$, *m5$, *m4$, *m3$, *m2$, *m1$, e$
+   	Usi5X = yes$
+    if Mode_reglage_PP = 0, [
+		n$, "--> pmx$ ", *x$, *y$, *z$, *zr$, *xnci$, *ynci$, *znci$, *u$, *v$, *w$, e$
+        n$, *m9$, *m8$, *m7$, *m6$, *m5$, *m4$, *m3$, *m2$, *m1$, e$ 
+		n$, *vtoolx$, *vtooly$, *vtoolz$, e$
+		]
 	
 	# ***** ATTENTION ! LE perçage 5 axes en 4AXES NE PASSE PAS ICI********
-	# ***** PAS de gestion complète du perçage 5 axes ICI
+	# ***** PAS de gestion complète du perçage 5 axes ICI 
 	#		- pmx$ 
 	# 		- p_debut_pmx pour le début XY/A/HZ/A ..
 	# 		- p_drill_5axes 1er A
 	# 		- p_drill_5axes_2  A suivants	 			
-	if opcode$ = 16 & nextop$ = 81, drill_4_axes = 1, p_drill_5axes, ex$ 
-	if opcode$ = 16 & nextop$ = 81 & debutpmx = 11, p_drill_5axes_2, ex$ # PAS de gestion du perçage 5 axes ICI
+	if opcode$ = 16 & nextop$ = 81, drill_4_axes = 1, ex$ 
+	if opcode$ = 16, ex$ 
 	pCalAxe(1)
     pCalXYZ_pmx
     xabs = X_pmx
@@ -3341,8 +3374,8 @@ pmx$        # Gestion 4 axes continues avec fonction 5 axes
         else, gcode$ = 1
         if gcode$ = 1,    [
             @xabs, @yabs, @old_x, @old_y
-            if xabs <> old_x | yabs <> old_y, n$, p_ori_usi, e$, n$, sinc_abs, sgcode, p_corr_5x, xabs, yabs, zabs, AxeRotAff, pcorrecteur_D, pfr, e$
-            else, n$, p_ori_usi, e$, n$, sinc_abs, sgcode, p_corr_5x, xabs, yabs, zabs, AxeRotAff, pcorrecteur_D, pfr, e$
+            if xabs <> old_x | yabs <> old_y, n$, p_ori_usi, e$, n$, sinc_abs, sgcode, p_corr_5x, xabs, yabs, zabs, *AxeRotAff, pcorrecteur_D, pfr, e$
+            else, n$, p_ori_usi, e$, n$, sinc_abs, sgcode, p_corr_5x, xabs, yabs, zabs, *AxeRotAff, pcorrecteur_D, pfr, e$
             ]
         else, p_corr_5x, n$, sinc_abs, sgcode, xabs, yabs, zabs, AxeRotAff, e$
 		ccAff = 40
@@ -3351,13 +3384,12 @@ pmx$        # Gestion 4 axes continues avec fonction 5 axes
     old_y = yabs
     old_z = zabs
 
-p_debut_pmx
-	#spaces$ = 1
+p_debut_pmx		# DEBUT 5 AXES
     if Mode_reglage_PP = 0, n$, "p_debut_pmx : ", e$
-    if mi7$ = 1, bloque = 2, n$, sbloque, e$        # déblocage de l'axe A/B
-    gcode$ = 0
+    if mi7$ = 1, bloque = 2, n$, sbloque, e$        # déblocage de l'axe A/B	
+	gcode$ = 0
 	p_ori_usi
-    n$, *sinc_abs, *sgcode, AxeRotAff, e$ 
+    n$, *sinc_abs, *sgcode, *AxeRotAff, e$ 
 	if opcode$ = 16, if mi7$ = 1, bloque = 1, n$, sbloque, e$        # déblocage de l'axe A/B
 	n$, *sinc_abs, *sgcode, "G17", *xabs, *yabs, ssa, spdlon, e$ 	
 	zr_ = zr$ 
@@ -3620,6 +3652,10 @@ p_block_form
 		else, [
 			n$, s_com_open, "DIM. BRUT 1/2", *stck_x_min, *stck_y_min, *stck_z_min, s_com_close, e$
 	        n$, s_com_open, "DIM. BRUT 2/2", *stck_x_max, *stck_y_max, *stck_z_max, s_com_close, e$
+			Longueur_brut = abs(stck_x_min) + abs(stck_x_max)
+			Largeur_brut = abs(stck_y_min) + abs(stck_y_max)
+			Epaisseur_brut = abs(stck_z_min) + abs(stck_z_max)
+			n$, s_com_open, "DIM. BRUT:", *Longueur_brut, *Largeur_brut, *Epaisseur_brut, s_com_close, e$ 
 			]
         ]
 
@@ -3760,7 +3796,7 @@ fmt "Dz"    2 Delta_F_Z
 fmt         2 old_F_X
 fmt         2 old_F_Y
 fmt         2 old_F_Z
-fmt "F"     2 fr_deg_inv
+fmt "F"     5 fr_deg_inv
 fmt         4 old_fr
 fmt "DA"    2 Delta_Angle
 fmt "A"     2 delta_A_sub
@@ -3775,15 +3811,23 @@ frdeg        : 0     #Feedrate deg/min actual
 prvfrdeg     : 0     #Feedrate deg/min actual
 ldelta       : 0     #Calculation for deg/min, linear
 cldelta      : 0     #Calculation for deg/min, linear and rotary
+old_fr_deg_inv : -1
 
 p_avances_avec_rot_A_B
-    # calculs en "DEG/Minutes"
-    #spaces$ = 1
+    # 			calculs en "DEG/Minutes" 
+	# ***************************************************
+	# --> transforme l'avance exprimée en MM/MN en linéaire 
+	# qui fera du DEG/MIN sur l'axe A/B
+	# en DEG/MIN recalculée afin d'avoir une avance "rotation/linéaire"
+	# correspondant à une avance à la dent identique entre les mouvements
+	# linéaires et en rotations
+	# ***************************************************
+
     if rotaxis$ <> 0,    # SUBSTITUTION X/Y
         [
-        #"1111", *memo_AB_subs, *epsi, *old_axe_AB, "delta_A_sub", *delta_A_sub, e$
-		Delta_Angle = delta_A_sub
-		#circum = sqrt(Delta_F_X) * 2 * pi$
+        #"1111", " ", *rotaxis$, " ", *memo_AB_subs, *delta_rot, *old_axe_AB, *x$, *old_F_X,e$
+		Delta_Angle = abs(delta_rot)
+		p_Z_dev
         circum = zabs * 2 * pi$			# Calcul du périmètre
         if circum = 0, circum = 9999
 		ldelta = sqrt((xabs-prv_xabs)^2+(yabs-prv_yabs)^2+(zabs-prv_zabs)^2)
@@ -3809,12 +3853,11 @@ p_avances_avec_rot_A_B
             old_F_Y = y$
             ]
 		#"uuu", *ldelta, *deltaXYZ, *Delta_Angle
-              #Delta_Angle = ((abs(cabs - prvcabs))/360)*circum
         ]
     if nextop$ = 11,                       # si  4 axes avec fonction 5 axes
         [
-        #"2222", *epsi, *old_axe_AB, *delta_axeA1
-        Delta_Angle = abs(epsi)
+        #"2222", *delta_rot, *old_axe_AB, *delta_axeA1
+        Delta_Angle = abs(delta_rot)
         Delta_F_X = y$ - old_F_X
         Delta_F_Y = y$ - old_F_Y
         Delta_F_Z = y$ - old_F_Z
@@ -3825,17 +3868,16 @@ p_avances_avec_rot_A_B
         old_F_Y = y$
         old_F_Z = z$
         ]
-    #"Delta_Angle", *Delta_Angle, " deltaXYZ:", *ldelta, *deltaXYZ, "lcircum", *circum
+    #"Delta_Angle", *Delta_Angle, " ldelta:", *ldelta, "deltaXYZ:", *deltaXYZ, "lcircum", *circum
 	@Delta_Angle
-    if Delta_Angle > 0 | (nextop$ = 11 & epsi > 0),
+    if Delta_Angle > 0, # | (nextop$ = 11 & Delta_Angle > 0),
         [
         #" ", *Delta_F_Y, *zabs, *rotaxis$, e$
         #deltaXYZ = sqrt(Delta_F_X * Delta_F_X + Delta_F_Y * Delta_F_Y + Delta_F_Z * Delta_F_Z)
-        ##fr_deg_inv = abs(cdelta/cldelta) * abs(fr_pos$ * (360/circum))
         fr_deg_inv = abs(Delta_Angle/deltaXYZ) * abs(fr_pos$ * (360/circum))
         if abs(fr_deg_inv - prvfrdeg) > 10, prvfrdeg = fr_deg_inv
         if fmtrnd(fr_deg_inv) = 0, fr_deg_inv = fr_pos$
-        if fr_deg_inv > 2000, fr_deg_inv = 2000
+        #if fr_deg_inv > 8000, fr_deg_inv = 8000
         if fr_deg_inv < 50, fr_deg_inv = 50
         fr_deg_inv = round(fr_deg_inv)
         #if inversefeed$, [  #Feedrate in seconds --> DEPUIS DEF MACHINE (valeurs très petites)
@@ -3843,11 +3885,13 @@ p_avances_avec_rot_A_B
             #]
         ]
 	# Avance sans rotation --> pas de calculs
-	if Delta_Angle = 0, avance = fr_pos$, *avance  
-    if rotaxis$ <> 0 & Delta_Angle > 0, [
-        #if Delta_Angle > 0 & (Delta_F_X > 0 | Delta_F_Y > 0 | Delta_F_Z > 0) & fr_deg_inv < 10000, fr_deg_inv
-        #else, avance = fr_pos$, if avance <> old_fr, avance
-        if Delta_Angle > 0 & (Delta_F_X > 0 | Delta_F_Y > 0 | Delta_F_Z > 0) & fr_deg_inv < 10000, if fr_deg_inv <> prv_fr_deg_inv, *fr_deg_inv
+	if Delta_Angle = 0, avance = fr_pos$, *avance, old_fr_deg_inv = -1 
+    if rotaxis$ <> 0 & Delta_Angle > 0 & nextop$ <> 11, [
+        if Delta_Angle > 0 & (Delta_F_X > 0 | Delta_F_Y > 0 | Delta_F_Z > 0) & fr_deg_inv < 10000, 
+			[
+			if fr_deg_inv <> old_fr_deg_inv, *fr_deg_inv
+			old_fr_deg_inv = fr_deg_inv
+			]
         Delta_Angle = 0
         Delta_F_X = 0
         Delta_F_Y = 0
@@ -3855,9 +3899,9 @@ p_avances_avec_rot_A_B
         ]
     if nextop$ = 11,                       # si  4 axes avec fonction 5 axes
         [
-        #"3333", *Delta_Angle, *epsi, *Delta_F_X, *Delta_F_Y, *Delta_F_Z, *old_fr#*fr_deg_inv
-        if epsi = 0, avance = fr_pos$, avance
-        if epsi > 0 & fr_deg_inv < 10000, fr_deg_inv, old_fr = -9999        # & (Delta_F_X <> 0 | Delta_F_Y <> 0 | Delta_F_Z <> 0)
+        #"3333", *Delta_Angle, *delta_rot, *Delta_F_X, *Delta_F_Y, *Delta_F_Z, *old_fr#*fr_deg_inv
+        if delta_rot = 0, avance = fr_pos$, avance
+        if delta_rot > 0 & fr_deg_inv < 10000, fr_deg_inv, old_fr = -9999        # & (Delta_F_X <> 0 | Delta_F_Y <> 0 | Delta_F_Z <> 0)
 		]
 #endregion
 
@@ -3961,6 +4005,9 @@ p_ugv    # macro pour activation code ugv
 		if Type_UGV = 4, n$, "G5.2 Q.01", e$	#Valeurs a définir dans un mrx$
 		if Type_UGV = 5, n$, "G5.3 P1", e$		#Valeurs a définir dans un mrx$
 		if Type_UGV = 6, n$, "G5 P2", e$
+		
+		if Type_UGV = 8, n$, "G61.1", e$, n$, "G5 P2", e$
+		if Type_UGV = 9, n$, "G61", e$
 		old_Type_UGV = 1
         ]
 
@@ -3972,6 +4019,9 @@ p_ugv_off  # arret pacro ugv
 		if Type_UGV = 4, n$, "G5.2 Q0.002", e$	#Valeurs a définir dans un mrx$
 		if Type_UGV = 5, n$, "G5.3 P50", e$		#Valeurs a définir dans un mrx$
 		if Type_UGV = 6, n$, "G5 P0", e$
+		
+		if Type_UGV = 8, n$, "G5 P0", e$, n$, "G64", e$
+		if Type_UGV = 9, n$, "G64", e$ 
 		old_Type_UGV = 0
 		]
 		
@@ -3983,7 +4033,7 @@ p_rot_perc_profond  # ROT BROCHE POUR PERCAGE PROFOND
         ]
     if posi_p_prof = 2, ssa = ss$    # dans la matière
 
-fmt  "OP. MC. :" 4 op_number  #Operation number as seen in the Operations Manager
+fmt  "OP. MASTERCAM #" 4 op_number  #Operation number as seen in the Operations Manager
 p_num_op_MC
     if affiche_num_op_MC = 1, [
         sOpId = no2str(op_id$)
@@ -3994,16 +4044,43 @@ p_num_op_MC
     #if affiche_num_op_MC = 2, if comm_cnt$ = zero, n$, s_com_open, *op_number, scomm$, s_com_close, e$  #Comment using MSG("") - When no op comment was entered, output just the op number
 	if affiche_num_op_MC = 2, n$, s_com_open, *op_number, s_com_close, e$  #Comment using MSG("") - When no op comment was entered, output just the op number
 
-p_affiche_type_op_MC
-	if affiche_type_op_MC = 1 & affiche_type_op_MC <> old_affiche_type_op_MC, 
+old_tool_op 	: -1
+tool_op_x       : -1
+affich_tool_op  : 0
+p_affiche_type_op_MC	
+	if affiche_type_op_MC = 1 & tool_op$ <> old_tool_op, 
 		[
-		if tool_op$ > 99 & tool_op$ < 109, tool_op$ = tool_op$ + 18
-		if tool_op$ > 200 & tool_op$ < 240, tool_op$ = tool_op$ + 83
-		if tool_op$ > 415 & tool_op$ < 462, tool_op$ = tool_op$ + 77
-		n$, s_com_open, *s_too_lop, s_com_close, e$ 
-		old_affiche_type_op_MC = affiche_type_op_MC	
+	    if tool_op$ > 129 & tool_op$ < 141, 
+	    	[
+			tool_op_x = tool_op$ - 14	#OK
+			affich_tool_op = 1
+	    	]
+		if tool_op$ > 149 & tool_op$ < 156 & affich_tool_op = 0, 
+			[
+			tool_op_x = tool_op$ - 24
+			affich_tool_op = 1
+			]
+		if tool_op$ > 200 & tool_op$ < 240 & affich_tool_op = 0, 
+			[ 
+			tool_op_x = tool_op$ - 68 	#OK
+			affich_tool_op = 1
+			]
+		if tool_op$ > 415 & tool_op$ < 462 & affich_tool_op = 0, 
+			[
+			if tool_op$ = 309, tool_op_x = 172
+			if tool_op$ = 416, tool_op_x = 173
+			if tool_op$ > 438 & tool_op$ < 452, tool_op_x = tool_op$ - 265
+			if tool_op$ > 458 & tool_op$ < 462, tool_op_x = tool_op$ - 272	#OK
+			affich_tool_op = 1
+			]
+		
+		#"-->", *tool_op_x , "tool_op", *tool_op$, e$
+		if affich_tool_op = 0, tool_op_x = tool_op$		#OK si < 116
+		n$, s_com_open, *s_tool_lop, s_com_close, e$ 
+		old_tool_op = tool_op$
+		affich_tool_op = 0	
 		!tool_op$ 
-		]
+	  ]
 				
 p_Z_mini_maxi_OP
     if output_z = 1, [
@@ -4040,12 +4117,12 @@ p_dec_renvoi_angle
     if m8$ = -1, n$, "G52 Y-#599", e$    	# suivant G18 XZ
     if m7$ = 1, n$, "G52 X#599", e$        	# suivant G19 YZ
     if m7$ = -1, n$, "G52 X-#599", e$    	# suivant G19 YZ
-    #if m7$ <> 0 & m8$ <> 0, [
+	if ra_rot_head$ = 1, n$, s_com_open, "RENVOIE D ANGLE -CIRCULAIRE-", s_com_close, e$
+	if ra_rot_head$ = 0, n$, s_com_open, "RENVOIE D ANGLE -FIXE-", s_com_close, e$
+    if m7$ <> 0 & m8$ <> 0, [
         Angle_PLAN_MC_renvoie_angle = atan2(-m8$,-m7$)
         decX = (cos(Angle_PLAN_MC_renvoie_angle)*50) * -1
         decY = (sin(Angle_PLAN_MC_renvoie_angle)*50) #* -1
-        if ra_rot_head$ = 1, n$, s_com_open, "RENVOIE D ANGLE -CIRCULAIRE-", s_com_close, e$
-		if ra_rot_head$ = 0, n$, s_com_open, "RENVOIE D ANGLE -FIXE-", s_com_close, e$
         n$, "#510 = ", *Angle_PLAN_MC_renvoie_angle, s_com_open, "ANGLE A plat MasterCam", s_com_close, e$
         n$, "#511 = (cos(#510)*#599) * -1", e$
         n$, "#512 = (sin(#510)*#599) ", e$
@@ -4061,7 +4138,7 @@ p_dec_renvoi_angle
         n$, s_com_open, "0=FIXE 1=ROTATIF MC=", *ra_rot_head$, s_com_close, e$	# Nci 1029 val 11	0=fixe 1=rotatif
         n$, s_com_open, "TYPE DE RENVOI MC= ", *ra_type$, s_com_close, e$		# 0=No special HEAD 1= Right-Angle 2=Compound 3=Block drill 4=UST
 		n$, " ", e$
-        #]	
+        ]	
 	# Sauvegarde de la configuration avant de forcer la config avec le renvoie d'angle 
 	old_usecandrill = usecandrill$    	# utiliser cycle percage lamage
     old_usecanpeck  = usecanpeck$    	# utiliser cycle debourrage
@@ -4132,22 +4209,20 @@ pheader$     # ENTETE DE PROGRAMME
     p_affiche_infos_config_armoire
     if utilise_palette = 1 | utilise_palette = 11, palette = 1
     "%", e$
-    if CN_textes <> 0,  [                               # Si la machine accepte les commentaires
-        if numcoment = 0, omitseq$ = 1                  # si pas de numero de bloc pour commentaires enlever les numeros de bloc
-        if change_nom = 1, [
-            pnom_nc
-            ptest_nom
-            snomprogentete = ucase(snomprogentete)
-            if Type_progno = 1, progno$, e$     # Oxxxx
-            if Type_progno = 2, *progno_, e$    # :xxxx
-            n$, s_com_open, snomprogentete, s_com_close, e$
-            s_com_open, *snom_entete, s_com_close, e$              
-            ]
-        else, [
-            if Type_progno = 1, progno$     	# Oxxxx
-            if Type_progno = 2, *progno_     	# :xxxx
-                s_com_open, sprogname$, s_com_close, e$
-            ]
+    if numcoment = 0, omitseq$ = 1                  # si pas de numero de bloc pour commentaires enlever les numeros de bloc
+    if change_nom = 1, [
+        pnom_nc
+        ptest_nom
+        snomprogentete = ucase(snomprogentete)
+        if Type_progno = 1, progno$, e$     # Oxxxx
+        if Type_progno = 2, *progno_, e$    # :xxxx
+        if CN_textes <> 0, n$, s_com_open, snomprogentete, s_com_close, e$
+        if CN_textes <> 0, s_com_open, *snom_entete, s_com_close, e$              
+        ]
+    else, [
+        if Type_progno = 1, progno$     	# Oxxxx
+        if Type_progno = 2, *progno_     	# :xxxx
+            [if CN_textes <> 0, s_com_open, sprogname$, s_com_close], e$
         ]
     n$, s_com_open, "*************************************", s_com_close, e$
 	s_nom_machine_entete = ucase (s_nom_machine_entete)
@@ -4321,12 +4396,12 @@ p_affiche_outil    # ecriture de l'appel outil pour psof et ptlchg4
 	if CN_textes <> 0, param_comp       # afficher le type de compensation
     if CN_textes <> 0, param_surep      # afficher les surepaisseurs
     pcan
-    if nextdc$ >= 8 & nextdc$ < 18, [
+    if nextdc$ >= 8 & nextdc$ < 18 | tool_op$ = 16, [   # 16 pour le Probing
         n$, "M5 M9", e$
         palpeur = 1
         palpage = 1
         ]
-    if nextdc$ < 8 | nextdc$ > 18,     # ROT BROCHE SAUF BROSSE, PALPAGES & PERCAGE PROFOND
+    if nextdc$ < 8 | nextdc$ > 18 & tool_op$ <> 16,     # ROT BROCHE SAUF BROSSE, PALPAGES & PERCAGE PROFOND
         n$, *ssa, pgamme, *spdlon, e$, n$, p_lubrif_ON, e$
     comment$
     gcode$ = 5
@@ -4364,36 +4439,43 @@ p_palette_debut
 psof0$       # DEBUT DE PROGRAMME pour T=0
     psof$
 
-psof$        # DEBUT DE PROGRAMME T<>0
-    p_restriction_PP  
+psof$        # DEBUT DE PROGRAMME T<>0  
+	p_restriction_PP  
     P_f_val_origine_depart_idem
+	probe_head$
     #p_lire_axes                                   # Lecture des parametres de la combinaison d'axes uniquement
     if renvoi_d_angle = 0 & rotation_axe = 2, result = mprint(serreur2)
     if renvoi_d_angle = 1 & rotation_axe = 2, result = mprint(serreur2_2)
-    if Mode_reglage_PP = 0, [
-         "************A:", *rotation_A, " B:", *rotation_B, " rotation gEnErale", *rotation_axe, " div:" *diviseur, e$
+    if Mode_reglage_PP = 0, 
+		[
+         "--> psof$ A:", *rotation_A, " B:", *rotation_B, " rotation gEnErale", *rotation_axe, " div:" *diviseur, e$
         " syncax", *syncaxis$, " old_sync", *old_syncaxis, " nbr_combi", *nbr_combi, " compt_axes_rot", *compt_axes_rot, e$
         " M1", *m1$, " M5", *m5$, " M7", *m7$, " M8", *m8$, " M9", *m9$, e$
         ]
-    if lire_def_machine = 0, [                      # affecter les valeurs suivant inclinaisons du programme
+	# **************
+	if lire_def_machine = 0, [                      # affecter les valeurs suivant inclinaisons du programme
         if rotation_A = 1, [
             if diviseur = 2, p_erreur_choix_axe
             diviseur = 1, useaxe = 1
+			VectAxe_X = 1
             ]
         if rotation_B = 1, [
             if diviseur = 1, p_erreur_choix_axe
             diviseur = 2, useaxe = 1
+			VectAxe_Y = 1
             ]
-        ]
-    if rotation_A =1 | rotation_B =1 & rotation_axe = 1, useaxe = 1
-        else, useaxe = 0
+        if rotation_A = 1, result = nwadrs(s_axe_rot_A, AxeRotAff)
+    	if rotation_B = 1, result = nwadrs(s_axe_rot_B, AxeRotAff)
+		]
+	# **************
     if lire_def_machine = 1, [
         if diviseur = 1 & rotation_B = 1, result = mprint(serreur3) # erreur: rotation sur B avec du A
         if diviseur = 2 & rotation_A = 1, result = mprint(serreur4) # erreur: rotation sur A avec du B
-        ]
-    if rotation_A = 1, result = nwadrs(s_axe_rot_A, axe_AB)
-    if rotation_B = 1, result = nwadrs(s_axe_rot_B, axe_AB)
-	
+        if rotation_A = 1, VectAxe_X = 1
+    	if rotation_B = 1, VectAxe_Y = 1
+		]  
+	if rotation_A = 1 | rotation_B = 1 & rotation_axe = 1, useaxe = 1
+        else, useaxe = 0
 	probing_sof # Probing
     #
     if outils_param = 1,  [                      # avec les parametres
@@ -4403,7 +4485,6 @@ psof$        # DEBUT DE PROGRAMME T<>0
         ]
     if tooltable$ <> 0 & CN_textes <> 0, [      # Si liste des outils et textes supportés
         if numcoment = 0, omitseq$ = 1          # Si pas de numero sur les commentaires
-        #n$, " ", e$
         omitseq$ = old_omitseq
         ]
     entete_ = 0
@@ -4451,6 +4532,7 @@ psof$        # DEBUT DE PROGRAMME T<>0
 	uninhibit_probe$			# Probing
     probing_before_toolchange	# Probing
     p_affiche_outil
+	probing_after_toolchange	# Probing
 	#temps DLL
 	Tot_time_op = 0	#remise à 0 entre l'entete et OPs
 	info_temps = 4, p_temps_affectation
@@ -4458,14 +4540,16 @@ psof$        # DEBUT DE PROGRAMME T<>0
     #
 	p_Z_mini_maxi_OP
     if tool_op$ = 114, cant_no$ = 0 #tool_op$ 114 = perCage AVANCE #pour ne pas afficher un arrosage erroné au debut
-    p_placement_apres_chang_outil                       	# AFFICHAGE DES MOUVEMENTS MACHINE
+    if opcode$ = 16, drill_4_axes = 1
+	p_placement_apres_chang_outil                       	# AFFICHAGE DES MOUVEMENTS MACHINE
     perreur_vit_broche
     p_ugv
-    if opcode$ = 16, drill_4_axes = 1
+    
 	# Z de départ perçage 5 axes
 	if opcode$ = 16 & diviseur = 1, old_z = ynci$  
 	if opcode$ = 16 & diviseur = 2, old_z = xnci$ 
     p_test_arcs_tete_renvoi
+	probing_after_coordinates
 #endregion
 
 #region placement_apres_chang_outil
@@ -4473,14 +4557,14 @@ p_placement_apres_chang_outil           # AFFICHAGE DES MOUVEMENTS MACHINE
     if Mode_reglage_PP = 0, "--> p_placement_apres_chang_outil", e$
 	@rotaxis$                           # mise a jour du type de substitution d'axe
     old_workofs = -999					# Force l'affichage du décallage après le changement d'outil
-	if nextop$ = 11,    [               # si  4 axes avec fonction 5 axes
+	if nextop$ = 11,    [               # si  4 axes avec fonction 5 axes ET ****perçage 5 axes****
         gcode$ = 0                      # Force le gcode a 0 pour faire un G0 apres
         x$ = xr$
         y$ = yr$
         z$ = zr$
-        axe_AB = 0
-        axeA1_dep = 0
-        old_axeA1 = 0
+        #axe_AB = 0
+        #axeA1_dep = 0
+        #old_axeA1 = 0
         debutpmx = 1                    # flag pour faire l'appel outil
         ]
     if nextop$ <> 11,   [               # utilisation en positionné ou substitution
@@ -4504,14 +4588,13 @@ p_placement_apres_chang_outil           # AFFICHAGE DES MOUVEMENTS MACHINE
             p_rot_ptlchg                                                # affichage de l'angle au chg outil
             n$, pcorh, *zabs, e$
             ]
-        if rotaxis$ <> 0,   
-        [        
-            pCalAxe(2)
-            if mi7$ = 1, bloque = 2, n$, sbloque, e$        			# déblocage de l'axe A/B
+		if rotaxis$ <> 0,   
+        [                
             if rotaxis$ = -1 | rotaxis$ = 1, xabs = 0                   # diviseur tourne autour de Y (X sbstitue)
-            if rotaxis$ = -2 | rotaxis$ = 2, yabs = 0                  # diviseur tourne autour de X (Y sbstitue)
+            if rotaxis$ = -2 | rotaxis$ = 2, yabs = 0                  	# diviseur tourne autour de X (Y sbstitue)
             pCalAxe(2)
 			p_ori_usi
+			if mi7$ = 1, bloque = 2, n$, sbloque, e$        			# déblocage de l'axe A/B
             n$, *sgcode, *sinc_abs, p_type_avance, "G17", *AxeRotAff, e$
             if mi7$ = 1, bloque = 1, n$, sbloque, e$					# si ROT - Bloque
 			n$, *xabs, *yabs, e$
@@ -4521,7 +4604,7 @@ p_placement_apres_chang_outil           # AFFICHAGE DES MOUVEMENTS MACHINE
         !x$, !y$, !z$, !xabs, !yabs, !zabs, !xinc, !yinc, !zinc, !axe_AB, !axe_ABi  	# mise à jour des positions affichées
         ]
     if tool_op$ = 100, n$, "(PAS DU FILETAGE = ", *pas_filetage, s_com_close, e$    # affichage de la valeur du vrai filetage
-    perreur_vit_broche
+	perreur_vit_broche
     old_ssa = ss$               # memo de la vitesse de broche
     old_op_id = op_id$          # memo du numero d'operation
     old_rotaxis = rotaxis$      # memo du type de substitution
@@ -4546,10 +4629,9 @@ ptlchg0$     # CHANGEMENT D'OUTIL NUL
     linarc$ = 0                                     # pour activer les G2 G3
     typcycle = 0                                    # variable mise a 1 lors des percages pour afficher l'intitulé du cycle
     # Probing
-	probing_before_toolchange
+	probing_before_toolchange 
 	!op_id$  # Added with probing support
-	inhibit_probe$
-	
+	inhibit_probe$	
 	if Test_bris_outils = 1, [
         pcool_off
         n$, "M5", e$
@@ -4577,6 +4659,7 @@ ptlchg0$     # CHANGEMENT D'OUTIL NUL
     if tool_typ$ = 5, ss$ = (abs(ss$))*-1           # si taraud à gauche inverser le sens de broche
     ssa = abs(ss$)
 	if ssa <> old_ssa, n$, *ssa, pgamme, *spdlon, e$     # si changement de vitesse de broche l'afficher
+	probing_after_toolchange
     if ra_type$ = 1 & ra_block$ >0, [				# Renvoi d'ANGLE
 		Angle_PLAN_MC_renvoie_angle = atan2(-m8$,-m7$)
 		if Angle_PLAN_MC_renvoie_angle <> old_Angle_PLAN_MC_renvoie_angle, [
@@ -4587,7 +4670,7 @@ ptlchg0$     # CHANGEMENT D'OUTIL NUL
 			]
 		]
     if nextop$ <> 11, 
-    [                             # utilisation en positionné ou substitution
+    	[                             # utilisation en positionné ou substitution
         gcode$ = 0                                  # Force le gcode a 0 pour faire un G0 apres
         xabs = x$                                   # prise en compte de XYZ
         yabs = y$
@@ -4612,7 +4695,8 @@ ptlchg0$     # CHANGEMENT D'OUTIL NUL
             pCalAxe(2)
 			if rotaxis$ = -1 | rotaxis$ = 1, xabs = 0                       # diviseur tourne autour de Y (X sbstitue)
             if rotaxis$ = -2 | rotaxis$ = 2, yabs = 0                       # diviseur tourne autour de X (Y sbstitue)
-            p_Apos_affiche_subs                                             # affichage de l'angle au chg outil nul pour continue/substitution
+            #p_Apos_affiche_subs 
+			p_affiche_type_rot                                            # affichage de l'angle au chg outil nul pour continue/substitution
             p_ori_usi
             n$, zabs, e$
             n$, sgcode, sinc_abs, xabs, yabs, !xinc, !yinc, e$
@@ -4681,6 +4765,7 @@ ptlchg$      # CHANGEMENT D'OUTIL
     increment_op_outil = 1
     p_lubrif_OFF
     pas = 0
+    old_tool_op = -1 #Force l'affichage du type d'OP. après l'appel d'outil
 	if s_reset_AB <> svide, n$, s_reset_AB, e$
     if old_Test_bris_outils = 1, p_test_bris_outil
     p_ugv_off
@@ -4700,7 +4785,6 @@ ptlchg$      # CHANGEMENT D'OUTIL
     # Probing
 	inhibit_probe$
     probing_before_toolchange
-	
 	n$, *sm_01, e$	#"M5"
     p_degage_ptlchg
 	debut_out = 1
@@ -4791,7 +4875,6 @@ peof0$
 	
 peof$
     probing_ptoolend
-	
 	p_lubrif_OFF                        	# Arret lubriff
     p_ugv_off
     n$, "M5", e$                            # Arret broche
@@ -4864,7 +4947,6 @@ peof$
 		p_Convert_time_dll
 		n$, s_com_open, "TEMPS TOTAL CORRIGE ", *Heure, *min, *sec, s_com_close, e$
 		]  
-	
 	uninhibit_eof_probe$
     probing_eof
 	#
@@ -5202,7 +5284,7 @@ pcalcul_plan
         angle_autour_Z = angle_autour_Z * -1
     ]
 
-pcalcul_xyz_absolu_old
+p_calcul_xyz_absolu_renvoie
     !angle_autour_X, !angle_autour_Y, !angle_autour_Z
     angle_autour_X_2 = angle_autour_X * -1
     angle_autour_Z_2 = angle_autour_Z * -1
@@ -5251,14 +5333,10 @@ p_calcul_xyz_tete_renvoie
     xdep = x$
     ydep = y$
     zdep = z$
-    pcalcul_xyz_absolu
+    p_calcul_xyz_absolu_renvoie
     x$ = xabs
     y$ = yabs
     z$ = zabs
-    #AUTRE CEDRIC
-     #xabs = x$ * m1$ + y$ * m2$ + z$ * m3$
-    #Yabs = x$ * m4$ + y$ * m5$ + z$ * m6$
-    #Zabs = x$ * m7$ + y$ * m8$ + z$ * m9$
 
 #endregion
 
@@ -5277,25 +5355,25 @@ pxyz_new    # ecriture des positions X Y Z et A pour XYZ CLASIQUE et substitutio
     #POUR SUBSTITUTION "incrémental" ?
     #if incremental = 0, xabs, yabs, axe_AB, zabs, !xinc, !yinc, !axe_ABi, !zinc
     #else, !xabs, !yabs, !axe_AB, !zabs, xinc, yinc, axe_ABi, zinc
-
-    if rotaxis$ = -2 | rotaxis$ = 2, [    # SUBSTITUTION Y par A (diviseur tourne autour de X)
+    
+	if rotaxis$ = -2 | rotaxis$ = 2, [    # SUBSTITUTION Y par A (diviseur tourne autour de X)
         pCalAxe(2)
         yabs = 0
         xabs = x$
-        xabs, [if yabs <> old_y, yabs], zdev, AxeRotAff, !yabs, !zabs    
-        axe_AB = axeAB_subs
-        old_y = 0
-        nbrtour = int (axe_AB / 360)
-        old_axe_AB  = axeAB_subs
+        xabs, [if yabs <> old_y, yabs], zdev, *AxeRotAff, !yabs, !zabs    
+        axe_AB = AxeRotAff
+        old_y = 0       
+        old_axe_AB  = AxeRotAff
+		nbrtour = int (axe_AB / 360)
         ]
     if rotaxis$ = -1 | rotaxis$ = 1, [   # SUBSTITUTION X par A (diviseur tourne autour de Y)
         pCalAxe(2)
         xabs = 0
         yabs = y$
         [if xabs <> old_x, xabs], yabs, zdev, AxeRotAff, !xabs, !zabs    
-        axe_AB  = axeAB_subs
+        axe_AB  = AxeRotAff
         old_x = 0
-        old_axe_AB  = axeAB_subs
+        old_axe_AB  = AxeRotAff
         nbrtour = int (axe_AB / 360)
         ]
 #endregion
@@ -5464,10 +5542,11 @@ perreur_D   #"ATTENTION RENUMEROTER TOUT -outil et H/D DIFFERENTS"
         ]
 
 perreur_vit_broche #"ATTENTION -BROCHE SANS VITESSE-"
-    if ssa = 0, [
+    if ssa = 0 & tool_op$ <> 16, [  # pas au palpage
         #p_erreur_messages
         #"ERREUR NUM: 14", s_erreur_message_0, e$
         result = mprint(serreur_vit_broche)
+        #exitpost$
         ]
 
 Perreur_origine_plan    #    OBSOLETE --> GENERE UN DECALLAGE DE COORDONNEES G52/TRANS/DEF 7 ...
@@ -5701,7 +5780,7 @@ pdrill$      # Cycle de percage G81 G82
 		if rotaxis$ <> 0, n$, s_com_open, "SUBSTITUTION D AXE", s_com_close, e$
         omitseq$ = old_omitseq
         ]
-    if drill_4_axes = 1, p_drill_5axes
+    if drill_4_axes = 1, p_drill_5axes	
     pdrill_param
     typcycle = 1
     p_casse_modalite            # casser la modalité de xy
@@ -5771,7 +5850,10 @@ ptap$       # Cycle de taraudage G84
     erreur_pas = pas
     erreur_pas = abs(erreur_pas)
     perreur_PAS_Taraud
-    if s_taraudage_rigide <> svide, n$, s_taraudage_rigide, *ssa,  s_com_open, "TARAUDAGE RIGIDE", s_com_close, e$
+    if s_taraudage_rigide <> svide, n$, 
+		if shftdrl$ = 0, s_taraudage_rigide, 
+		*ssa, s_com_open, "RIGIDE", s_com_close, e$
+	else, n$, s_com_open, "FLOTANT", s_com_close, e$
     n$, sinc_abs, *sgdrill, *sgdrlref, p_XY_perc, [if peck1$ > 0, *peck1$], *pas, tempo, e$
 	if peck1$ > 0, result = mprint(s_avert_taraud_brise_c)  #AFFICHAGE D UN MESSAGE POUR TARAUDAGE AVEC BRISE COPEAUX
 
@@ -5860,7 +5942,7 @@ p_transit_perc_subst	# SUBSTITUTION 	# TROUS SUIVANTS
     nbrtour = int (axe_AB / 360)
 		
 pdrill_2$   # Percage suivant
-    if drill_4_axes = 1, p_drill_5axes_2
+	if drill_4_axes = 1, p_drill_5axes_2
     pdrill_param	
     if drill_4_axes = 0 & rotaxis$ = 0, p_position_trou, e$
 	if rotaxis$ <> 0, p_transit_perc_subst
@@ -6012,9 +6094,11 @@ p_drill_5axes   # ecriture pour TOUS LES percageS en 4 axes continus **AVEC** ZO
     if Mode_reglage_PP = 0, n$, "--> pdrill_5_1 VOIR", *x$, *y$, *z$, *zr$, *xnci$, *ynci$, *znci$, *u$, *v$, *w$,
         *m9$, *m8$, *m7$, *m6$, *m5$, *m4$, *m3$, *m2$, *m1$, e$
     #p_Z_mini_maxi_OP
-    gcode$ = 0
-	pCalAxe(1)
-	n$, `sgcode, AxeRotAff, e$ 	
+		# GERE PAR LE G99/G98
+		#p_calcul_XYZ_percage_5x
+		#zabs = garde_abs
+		#gcode$ = 0
+		#n$, *sgcode, *zabs, e$
     if t$ <> old_t, [
         #n$, "G52 X0. Y0. Z0.", e$
         #p_degage_4_axes
@@ -6031,14 +6115,17 @@ p_drill_5axes   # ecriture pour TOUS LES percageS en 4 axes continus **AVEC** ZO
         ]
 	debutpmx = 11
 	old_garde_abs = garde_abs
-	
+	#old_axerot_Cal = axerot_Cal
+
+#en 4 axes continus **SANS** la ZONE DE SECU
 p_drill_5axes_2   # ecriture DE TOUS LES percageS SUIVANTS en 4 axes continus **SANS** la ZONE DE SECU
     if Mode_reglage_PP = 0, n$, "--> pdrill_5_2 VOIR", *x$, *y$, *z$, *zr$, *xnci$, *ynci$, *znci$, *u$, *v$, *w$,
         *m9$, *m8$, *m7$, *m6$, *m5$, *m4$, *m3$, *m2$, *m1$, e$
     #p_drill_5axes_commun_debut
 	p_correc_time_G0
     if type_dec_4x_percage = 1, [
-        if tox4$ <> old_tox4 | toy4$ <> old_toy4 | toz4$ <> old_toz4 | w$ <> old_w_, [
+        if tox4$ <> old_tox4 | toy4$ <> old_toy4 | toz4$ <> old_toz4 | w$ <> old_w_, 
+			[
             n$, "G52", *tox4_, *toy4_, *toz4_, e$
             ]
         xnci$ = 0
@@ -6048,14 +6135,12 @@ p_drill_5axes_2   # ecriture DE TOUS LES percageS SUIVANTS en 4 axes continus **
         ]
     pCalAxe(1)
     pdril5x_annul
-    # *old_axe_AB, *epsi, e$
-    if epsi <> 0, [
+    if delta_rot <> 0, [
         p_Z_SECU_ret_5x
 		if mi7$ = 1, bloque = 2, n$, sbloque, e$    # si ROT - Débloque
         gcode$ = 0
-        n$, sgcode, p_axeAB_pmx, e$
+        n$, sgcode, AxeRotAff, e$
         if mi7$ = 1, bloque = 1, n$, sbloque, e$	# si ROT - Bloque
-		epsi = 0
         ]
 	old_garde_abs = garde_abs
 
@@ -6068,7 +6153,7 @@ p_Z_SECU_ret_5x	# si après rotation le Z est > alors remonter au Z suivant avan
 	
 pdril5x_annul   # annulation percage 5 axes
     if Mode_reglage_PP = 0, n$, "--> pdril5x_annul", e$
-    if epsi <> 0 | nextop$ = 80 | gcode$ = 80 | nextop$ = 1003, [
+    if delta_rot <> 0 | nextop$ = 80 | gcode$ = 80 | nextop$ = 1003, [
         gcode$ = 5, n$, *sgcode, e$
         if drillref = 0, zabs = prof_abs + drl_sel_ini$, n$, *zabs, e$
         ]
@@ -6496,28 +6581,62 @@ pdrlcst_16_2
 #endregion
 
 #region positions_percages_et_annulation
+#region debug_perçages
+p_Debug_Valeurs_Percages
+    "depth$ =", *depth$, "( En 3 Axes Abs fond du trous en 5X Relatif au dessus de la garde )", e$
+    "initht$ =", *initht$, "( En 3 Axes Abs de la rétractation entre les trous idem mais en relatif pour le 5X)", e$
+    "refht$ = ", *refht$, "( En 3 Axes Abs de la garde du trou en 5X Relatif a la position du trous selctioné)", e$
+    n$, *e$
+    "drl_depth_x$ = ", *drl_depth_x$, "( En 3 Axes et 5X  Abs de la position du fond du trous)",  e$
+    "drl_depth_y$ = ", *drl_depth_y$, "( En 3 Axes et 5X  Abs de la position du fond du trous)",  e$
+    "drl_depth_z$ = ", *drl_depth_z$, "( En 3 Axes et 5X  Abs de la position du fond du trous)",  e$
+    n$, *e$
+    "drl_init_x$ = ", *drl_init_x$, "( En 3 Axes et 5X  Abs rétractation entre les trous)", e$
+    "drl_init_y$ = ", *drl_init_y$, "( En 3 Axes et 5X  Abs rétractation entre les trous)", e$
+    "drl_init_z$ = ", *drl_init_z$, "( En 3 Axes et 5X  Abs rétractation entre les trous)", e$
+    n$, *e$
+    "drl_ref_x$ = ", *drl_ref_x$, "( En 3 Axes et 5X  Abs de la garde)", e$
+    "drl_ref_y$ = ", *drl_ref_Y$, "( En 3 Axes et 5X  Abs de la garde)", e$
+    "drl_ref_z$ = ", *drl_ref_Z$, "( En 3 Axes et 5X  Abs de la garde)", e$
+    n$, *e$
+    "drl_tos_x$ =", *drl_tos_x$, "( En 3 Axes et 5X  Abs de la position du trou selctioné)", e$
+    "drl_tos_y$ =", *drl_tos_y$, "( En 3 Axes et 5X  Abs de la position du trou selctioné)", e$
+    "drl_tos_z$ =", *drl_tos_z$, "( En 3 Axes et 5X  Abs de la position du trou selctioné)", e$
+    n$, *e$
+    "drl_sel_ini$ = ", *drl_sel_ini$, "( En 3 et 5 Axes Distance entre fond du troue et sécuritée)", e$
+    "drl_sel_ref$ = ", *drl_sel_ref$, "( En 3 et 5 Axes distance entre fond du trous et la garde)", e$
+    "drl_sel_tos$ =", *drl_sel_tos$, "( En 3 et 5 Axes distance entre fond du trous et le haut du trou)", e$
+	n$, *e$
+#endregion 
 p_calcul_XYZ_percage_5x
-    if axe_AB = 0, [
+    Usi5X = yes$
+	if AxeRotAff = 0, [
         prof_abs = z$
         garde_abs = w$ #refht$
         prof_inc = depth$ - refht$
         garde_inc = refht$ - initht$
         ]
-    if axe_AB <>0, [
-        if diviseur = 1, prof_abs = z$*cos(axe_AB) - y$*sin(axe_AB) * -1
-        if diviseur = 2, prof_abs = z$*cos(axe_AB) - x$*sin(axe_AB)
-        garde_abs = prof_abs + drl_sel_ref$        # plan Z de GARDE
-        p_calcul_rot_pmx    #Pts X & Y
+    if AxeRotAff <> 0, [
+        axe_AB  = AxeRotAff
+		if diviseur = 1,	# rotation autour de X
+			[
+			yabs = y$*cos(axe_AB) - z$*sin(axe_AB)
+			prof_abs = y$*sin(axe_AB) + z$*cos(axe_AB)
+			]
+		if diviseur = 2,   	# rotation autour de Y
+			[
+		    xabs = x$*cos(axe_AB) + z$*sin(axe_AB)
+		    prof_abs = -x$*sin(axe_AB) + z$*cos(axe_AB)
+			]	
+		garde_abs = prof_abs + drl_sel_ref$        # plan Z de GARDE
+        #pCalAxe(1)    #Pts X & Y
         ]
     if Mode_reglage_PP = 0, [
 		#"zabs = fond du trou en ABSOLU VAL MC", e$	
-		#"zabs = VALEUR DE REFERENCE POUR TOUS LES CALCULS DE ****Zs****", e$
+		#"zabs = VALEUR DE REFERENCE POUR TOUS LES CALCULS DE ****Zs****", e$	
 		spaces$ = 1
-		*z$, " ", *y$, " ", *znci$, *ynci$,  e$ 
-		*drl_ref_z$, *drl_sel_ini$, *drl_sel_ref$, *drl_sel_tos$, e$
-		*drl_init_z$, *drl_tos_z$, *drl_zdrl_z$, " ",  *w$, " ", *z$, *znci$, e$
-		*depth$, " ", *refht$, *zabs, e$	#*prof_perc_abs_5x, 
-		*drl_depth_z$, *zr$, e$
+		p_Debug_Valeurs_Percages
+		*prof_abs, e$
 		spaces$ = 0
 		]
 	#if type_dec_4x_percage = 1, garde_abs = 0
@@ -6554,7 +6673,7 @@ p_XY_perc     # ecriture des x, y en abs ou incremental pour percage
         !refht$
         if incremental = 0, xabs, yabs, AxeRotAff, prof_abs, garde_abs, !xinc, !yinc, !axe_ABi, !prof_inc, !garde_inc
         else, !xabs, !yabs, !AxeRotAff, !prof_abs, !garde_abs, xinc, yinc, axe_ABi, prof_inc, garde_inc
-        old_axe_AB = axeAB_subs
+        old_axe_AB = AxeRotAff
         nbrtour = int (axe_AB / 360)
         ]
     p_modal     # afficher en format modal
@@ -6591,160 +6710,206 @@ pcanceldc$  # Annulation de cyle fixe
 
 #region Type_d_opErations
 # Type d'operation
-s_too_lop_0    : "NON DEFINIT"
-s_too_lop_1    : "CONTOUR"
-s_too_lop_2    : "PERCAGE"
-s_too_lop_3    : "POCHE"
-s_too_lop_4    : "TRANSFORMATION-MIRROR ROTATE TRANSLATE"
-s_too_lop_5    : "MULTI-SURF. EBAUCHE PARALLELLE"
-s_too_lop_6    : "MULTI-SURF. EBAUCHE RADIALE"
-s_too_lop_7    : "MULTI-SURF. EBAUCHE PROJECTION"
-s_too_lop_8    : "MULTI-SURF. EBAUCHE ISOPARAM"
-s_too_lop_9    : "MULTI-SURF. EBAUCHE CONTOUR"
-s_too_lop_10   : "MULTI-SURF. EBAUCHE POCHE"
-s_too_lop_11   : "MULTI-SURF. FINIT. PARALLELLE"
-s_too_lop_12   : "MULTI-SURF. FINIT. RADIALE"
-s_too_lop_13   : "MULTI-SURF. FINIT. PROJECTION"
-s_too_lop_14   : "MULTI-SURF. FINIT. ISOPARAM"
-s_too_lop_15   : "MULTI-SURF. FINIT. CONTOUR"
-s_too_lop_16   : "OPERATION PAR C-HOOK"
-s_too_lop_17   : "ENTREE MANUELLE"
-s_too_lop_18   : "CERCLE"
-s_too_lop_19   : "POINT"
-s_too_lop_20   : "LIMITATION"
-s_too_lop_21   : "REGLE"
-s_too_lop_22   : "REVOLUTION"
-s_too_lop_23   : "LETTRE"
-s_too_lop_24   : "BALAYEE 2D"
-s_too_lop_25   : "BALAYEE 3D"
-s_too_lop_26   : "CARREAU"
-s_too_lop_27   : "SECTION"
-s_too_lop_28   : "PERCAGE 5-AXES"
-s_too_lop_29   : "COURBE 5-AXES"
-s_too_lop_30   : "PROJECT. SUR UN PLAN"
-s_too_lop_31   : "PROJECT. SUR UN CYLINDRE"
-s_too_lop_32   : "PROJECT. SUR UNE SPHERE"
-s_too_lop_33   : "PROJECT. SUR UN CONE"
-s_too_lop_34   : "PROJECT. SUR UNE SECTION"
-s_too_lop_35   : "PROJECT. SUR UNE SURFACE"
-s_too_lop_36   : "NON-ASSOCIATIF CONTOUR"
-s_too_lop_37   : "NON-ASSOCIATIF PERCAGE"
-s_too_lop_38   : "NON-ASSOCIATIF POCHE"
-s_too_lop_39   : "MULTI-SURF. FINIT. PENCIL TRACE"
-s_too_lop_40   : "MULTI-SURF. FINIT. LEFTOVER STOCK"
-s_too_lop_41   : "MULTI-SURF. FINIT. STEEP"
-s_too_lop_42   : "MULTI-SURF. FINIT. SHALLOW"
-s_too_lop_43   : "MULTI-SURF. FINIT. CONSTANT SCALLOP"
-s_too_lop_44   : "MULTI-SURF. EBAUCHE PLUNGE"
-s_too_lop_45   : "MULTI-SURF. FINIT. 5-AXE ISOPARAM"
-s_too_lop_46   : "MULTI-SURF. FINIT. 4-AXE"
-s_too_lop_47   : "MERGED IN ASCII NCI"
-s_too_lop_48   : "5-AXE SWARF"
-s_too_lop_49   : "5-AXE ROLL DIE"
-s_too_lop_50   : "NON DEFINIT"
-s_too_lop_51   : "CONTOURNAGE AXIAL"
-s_too_lop_52   : "CONTOURNAGE RADIAL"
-s_too_lop_53   : "CONTOURNAGE AXE C"
-s_too_lop_54   : "VE PERCAGE, NOT USED NON-ASSOCIATI"
-s_too_lop_55   : "PERCAGE AXIAL"
-s_too_lop_56   : "PERCAGE RADIAL"
-s_too_lop_57   : "PERCAGE AXE C"
-s_too_lop_58   : "NON DEFINIT"
-s_too_lop_59   : "NON DEFINIT"
-s_too_lop_60   : "EBAUCHE"
-s_too_lop_61   : "FINITION"
-s_too_lop_62   : "GORGE"
-s_too_lop_63   : "FILETAGE"
-s_too_lop_64   : "PERCAGE"
-s_too_lop_65   : "POINT"
-s_too_lop_66   : "DRESSAGE"
-s_too_lop_67   : "TRONCONNAGE"
-s_too_lop_68   : "GORGE"
-s_too_lop_69   : "ENTREE MANUELLE"
-s_too_lop_70   : "MERGED ASCII"
-s_too_lop_71   : "NON DEFINIT"
-s_too_lop_72   : "NON DEFINIT"
-s_too_lop_73   : "NON DEFINIT"
-s_too_lop_74   : "CONTOUR FIL"
-s_too_lop_75   : "CYCLE FIL"
-s_too_lop_76   : "POCHE FIL"
-s_too_lop_77   : "ENTREE MANUELLE FIL"
-s_too_lop_78   : "POINT FIL"
-s_too_lop_79   : "4-AXES FIL"
-s_too_lop_80   : "TRANSFORMATION FIL"
-s_too_lop_81   : "ASSOCIATIVE TRIMMED FIL"
-s_too_lop_82   : "MERGED IN ASCII NCI FIL"
- 
-s_too_lop_100  : "FILETAGE A LA FRAISE"				# +18
-s_too_lop_101  : "EDIT COMMON OPERATION PARAMETERS"
-s_too_lop_102  : "SURFACAGE"
-s_too_lop_103  : "ASSOCIATIF LIMITATION"
-s_too_lop_104  : "CONTROL OPERATION SOLID PERCAGE"
-s_too_lop_105  : "SLOT MILL"
-s_too_lop_106  : "HELIX BORE"
-s_too_lop_107  : "MULTI-SURF. EBAUCHE REPRISE"
-s_too_lop_108  : "ASSOCIATIF NESTING CONTAINER OPERATION"
+s_tool_lop_0    : "NON DEFINI"
+s_tool_lop_1    : "CONTOURNAGE"
+s_tool_lop_2    : "PERCAGE"
+s_tool_lop_3    : "POCHE"
+s_tool_lop_4    : "TRANSFORMATION-MIRROR ROTATE TRANSLATE"
+s_tool_lop_5    : "MULTI-SURF. EBAUCHE PARALLELLE"
+s_tool_lop_6    : "MULTI-SURF. EBAUCHE RADIALE"
+s_tool_lop_7    : "MULTI-SURF. EBAUCHE PROJECTION"
+s_tool_lop_8    : "MULTI-SURF. EBAUCHE ISOPARAM"
+s_tool_lop_9    : "MULTI-SURF. EBAUCHE CONTOUR"
+s_tool_lop_10   : "MULTI-SURF. EBAUCHE POCHE"
+s_tool_lop_11   : "MULTI-SURF. FINIT. PARALLELLE"
+s_tool_lop_12   : "MULTI-SURF. FINIT. RADIALE"
+s_tool_lop_13   : "MULTI-SURF. FINIT. PROJECTION"
+s_tool_lop_14   : "MULTI-SURF. FINIT. ISOPARAM"
+s_tool_lop_15   : "MULTI-SURF. FINIT. CONTOUR"
+s_tool_lop_16   : "PALPAGE - MESURE"  #"OP C-HOOKS"
+s_tool_lop_17   : "ENTREE MANUELLE"
+s_tool_lop_18   : "CERCLE"
+s_tool_lop_19   : "POINT"
+s_tool_lop_20   : "LIMITATION"
+s_tool_lop_21   : "REGLE"
+s_tool_lop_22   : "REVOLUTION"
+s_tool_lop_23   : "LETTRE"
+s_tool_lop_24   : "BALAYEE 2D"
+s_tool_lop_25   : "BALAYEE 3D"
+s_tool_lop_26   : "CARREAU"
+s_tool_lop_27   : "SECTION"
+s_tool_lop_28   : "PERCAGE 5-AXES"
+s_tool_lop_29   : "COURBE 5-AXES"
+s_tool_lop_30   : "PROJECT. SUR UN PLAN"
+s_tool_lop_31   : "PROJECT. SUR UN CYLINDRE"
+s_tool_lop_32   : "PROJECT. SUR UNE SPHERE"
+s_tool_lop_33   : "PROJECT. SUR UN CONE"
+s_tool_lop_34   : "PROJECT. SUR UNE SECTION"
+s_tool_lop_35   : "PROJECT. SUR UNE SURFACE"
+s_tool_lop_36   : "NON-ASSOCIATIF CONTOUR"
+s_tool_lop_37   : "NON-ASSOCIATIF PERCAGE"
+s_tool_lop_38   : "NON-ASSOCIATIF POCHE"
+s_tool_lop_39   : "MULTI-SURF. FINIT. PENCIL TRACE"
+s_tool_lop_40   : "MULTI-SURF. FINIT. LEFTOVER STOCK"
+s_tool_lop_41   : "MULTI-SURF. FINIT. STEEP"
+s_tool_lop_42   : "MULTI-SURF. FINIT. SHALLOW"
+s_tool_lop_43   : "MULTI-SURF. FINIT. CONSTANT SCALLOP"
+s_tool_lop_44   : "MULTI-SURF. EBAUCHE PLUNGE"
+s_tool_lop_45   : "MULTI-SURF. FINIT. 5-AXE ISOPARAM"
+s_tool_lop_46   : "MULTI-SURF. FINIT. 4-AXE"
+s_tool_lop_47   : "MERGED IN ASCII NCI"
+s_tool_lop_48   : "5-AXE SWARF"
+s_tool_lop_49   : "5-AXE ROLL DIE"
+s_tool_lop_50   : "NON DEFINIT"
+s_tool_lop_51   : "CONTOURNAGE AXIAL"       # OPs de tournage
+s_tool_lop_52   : "CONTOURNAGE RADIAL"
+s_tool_lop_53   : "CONTOURNAGE AXE C"
+s_tool_lop_54   : "NOT USED NON-ASSOCIATI"
+s_tool_lop_55   : "PERCAGE AXIAL"
+s_tool_lop_56   : "PERCAGE RADIAL"
+s_tool_lop_57   : "PERCAGE AXE C"
+s_tool_lop_58   : "NON DEFINIT"
+s_tool_lop_59   : "NON DEFINIT"
+s_tool_lop_60   : "EBAUCHE"
+s_tool_lop_61   : "FINITION"
+s_tool_lop_62   : "GORGE"
+s_tool_lop_63   : "FILETAGE"
+s_tool_lop_64   : "PERCAGE - TOUR."
+s_tool_lop_65   : "POINT"
+s_tool_lop_66   : "DRESSAGE"
+s_tool_lop_67   : "TRONCONNAGE"
+s_tool_lop_68   : "GORGE EBAUCHE"
+s_tool_lop_69   : "ENTREE MANUELLE"
+s_tool_lop_70   : "MERGED ASCII NCI"
+s_tool_lop_71   : "TOUR CONTOUR DYNAMIQUE"
+s_tool_lop_72   : "TOUR CONTOUR EBAUCHE"
+s_tool_lop_73   : "PRIME TURNING"           # Fin op de tournage
+s_tool_lop_74   : "CONTOUR FIL"
+s_tool_lop_75   : "CYCLE FIL"
+s_tool_lop_76   : "POCHE FIL"
+s_tool_lop_77   : "ENTREE MANUELLE FIL"
+s_tool_lop_78   : "POINT FIL"
+s_tool_lop_79   : "4-AXES FIL"
+s_tool_lop_80   : "TRANSFORMATION FIL"
+s_tool_lop_81   : "ASSOCIATIVE TRIMMED FIL"
+s_tool_lop_82   : "MERGED IN ASCII NCI FIL"
+s_tool_lop_83   : ""
+s_tool_lop_84   : ""
+s_tool_lop_85   : ""
+s_tool_lop_86   : ""
+s_tool_lop_87   : ""
+s_tool_lop_88   : ""
+s_tool_lop_89   : ""
+s_tool_lop_90   : ""
+s_tool_lop_91   : ""
+s_tool_lop_92   : ""
+s_tool_lop_93   : ""
+s_tool_lop_94   : ""
+s_tool_lop_95   : ""
+s_tool_lop_96   : ""
+s_tool_lop_97   : ""
+s_tool_lop_98   : ""
+s_tool_lop_99   : ""
+s_tool_lop_100  : "FILETAGE A LA FRAISE"				# +18
+s_tool_lop_101  : "EDIT COMMON OPERATION PARAMETERS"
+s_tool_lop_102  : "SURFACAGE"
+s_tool_lop_103  : "ASSOCIATIF LIMITATION"
+s_tool_lop_104  : "CONTROL OPERATION SOLID PERCAGE"
+s_tool_lop_105  : "SLOT MILL"
+s_tool_lop_106  : "HELIX BORE"
+s_tool_lop_107  : "MULTI-SURF. EBAUCHE REPRISE"
+s_tool_lop_108  : "ASSOCIATIF NESTING CONTAINER OPERATION"
+s_tool_lop_109  : "Multi-surface finish blend"
+s_tool_lop_110  : "Multi-surface 5-axis, rough"
+s_tool_lop_111  : "Slice 5-axis"
+s_tool_lop_112  : "Port 5-axis"
+s_tool_lop_113  : "5-axis circle. while circle mill toolpaths with 4- or 5-axis output continue to use 113"
+s_tool_lop_114  : "Advanced drill"
+s_tool_lop_115  : "Chamfer drill"														#tool_op_x = 116
+#OK
+s_tool_lop_130  : "Tab cutoff"                        				 					#tool_op_x = 117
+s_tool_lop_131  : "Multi-surface rough pocket, light"
+s_tool_lop_132  : "UGV 3D Optirought dynamique"
+s_tool_lop_133  : "Nesting onionskin operation"
+s_tool_lop_134  : "2-D Dynamique"
+s_tool_lop_135  : "Saw"
+s_tool_lop_136  : "FBM drill control operation"
+s_tool_lop_137  : "FBM mill pocket operation"
+s_tool_lop_138  : "FBM mill contour operation"
+s_tool_lop_139  : "Solid model operation"
+s_tool_lop_140  : "2D model chamfer"													#tool_op_x = 127
 
-s_too_lop_201  : "CYCLE FINITION"					# +83
-s_too_lop_202  : "CYCLE EBAUCHE"
-s_too_lop_203  : "CYCLE EBAUCHE ET FINITION"
-s_too_lop_204  : "CYCLE EBAUCHE DRESSAGE"
-s_too_lop_205  : "CYCLE EBAUCHE ET FINITION DRESSAGE"
-s_too_lop_206  : "CYCLE MODEL REPETITION EBAUCHE"
-s_too_lop_207  : "CYCLE MODEL REPETITION EBAUCHE ET FINITION"
-s_too_lop_208  : "CYCLE GORGE EBAUCHE"
-s_too_lop_209  : "CYCLE GORGE FINITION"
-s_too_lop_210  : "RAPIDE EBAUCHE"
-s_too_lop_211  : "RAPIDE FINITION"
-s_too_lop_212  : "RAPIDE GORGE"
-s_too_lop_213  : "OPERATION GENEREE PAR C-HOOK"
-s_too_lop_214  : "TRANSFER BRUT"
-s_too_lop_215  : "RETOURNE BRUT"
-s_too_lop_216  : "AVANCE BARRE"
-s_too_lop_217  : "SERRAGE - DESSERAGE MORS"
-s_too_lop_218 : "Tailstock operation"
-s_too_lop_219 : "Steadyrest operation"
-s_too_lop_220 : "Pinch-turn operation"
-s_too_lop_221 : "Custom operation with tool" 
-s_too_lop_222 : "Custom operation without tool" 
-s_too_lop_223 : "PERCAGE AVANCE"
-s_too_lop_224 : "Plunge turn (chained geometry)"
-s_too_lop_225 : "Plunge turn (point geometry)"
-s_too_lop_226 : "Turret park operation"
-s_too_lop_227 : "Custom threading"
-s_too_lop_228 : "B-axis contour turning (Mill-Turn only)"
-s_too_lop_229 : "--------"
-s_too_lop_230 : "Simple bar feed (Mill-Turn only)"
-s_too_lop_231 : "Bar feed with tool stop or tool pull (Mill-Turn only)"
-s_too_lop_232 : "Spindle clamp/unclamp (Mill-Turn only)"
-s_too_lop_233 : "Spindle advance/retract (Mill-Turn only)"
-s_too_lop_234 : "Spindle sync (Mill-Turn only)"
-s_too_lop_235 : "Tailstock advance/retract (Mill-Turn only)"
-s_too_lop_236 : "Turret park (Mill-Turn only)"
-s_too_lop_237 : "Center operation(Mill-Turn only)"
-s_too_lop_238 : "Steady rest operation(Mill-Turn only)"
-s_too_lop_239 : "Steady rest point operation(Mill-Turn only)" 
+s_tool_lop_150  : "Probe cycle: probe motion"        									#tool_op_x = 128
+s_tool_lop_151  : "Probe cycle command block"
+s_tool_lop_152  : "Probe cycle header"
+s_tool_lop_153  : "Probe cycle trailer"
+s_tool_lop_154  : "SafetyZone linking or multiaxis linking operation"
+s_tool_lop_155  : "SafetyZone for multiaxis drill operation" 							#tool_op_x = 133
+#OK
+s_tool_lop_201  : "CYCLE FINITION"					# OPs de tournage 					#tool_op_x = 134
+s_tool_lop_202  : "CYCLE EBAUCHE"
+s_tool_lop_203  : "CYCLE EBAUCHE ET FINITION"
+s_tool_lop_204  : "CYCLE EBAUCHE DRESSAGE"
+s_tool_lop_205  : "CYCLE EBAUCHE ET FINITION DRESSAGE"
+s_tool_lop_206  : "CYCLE MODEL REPETITION EBAUCHE"
+s_tool_lop_207  : "CYCLE MODEL REPETITION EBAUCHE ET FINITION"
+s_tool_lop_208  : "CYCLE GORGE EBAUCHE"
+s_tool_lop_209  : "CYCLE GORGE FINITION"
+s_tool_lop_210  : "RAPIDE EBAUCHE"
+s_tool_lop_211  : "RAPIDE FINITION"
+s_tool_lop_212  : "RAPIDE GORGE"
+s_tool_lop_213  : "OPERATION GENEREE PAR C-HOOK"
+s_tool_lop_214  : "TRANSFER BRUT"
+s_tool_lop_215  : "RETOURNE BRUT"
+s_tool_lop_216  : "AVANCE BARRE"
+s_tool_lop_217  : "SERRAGE - DESSERAGE MORS"
+s_tool_lop_218 : "Tailstock operation"
+s_tool_lop_219 : "Steadyrest operation"
+s_tool_lop_220 : "Pinch-turn operation"
+s_tool_lop_221 : "Custom operation with tool" 
+s_tool_lop_222 : "Custom operation without tool" 
+s_tool_lop_223 : "PERCAGE AVANCE"
+s_tool_lop_224 : "Plunge turn (chained geometry)"
+s_tool_lop_225 : "Plunge turn (point geometry)"
+s_tool_lop_226 : "Turret park operation"
+s_tool_lop_227 : "Custom threading"
+s_tool_lop_228 : "B-axis contour turning (Mill-Turn only)"
+s_tool_lop_229 : "SURFACAGE"
+s_tool_lop_230 : "Simple bar feed (Mill-Turn only)"
+s_tool_lop_231 : "Bar feed with tool stop or tool pull (Mill-Turn only)"
+s_tool_lop_232 : "Spindle clamp/unclamp (Mill-Turn only)"
+s_tool_lop_233 : "Spindle advance/retract (Mill-Turn only)"
+s_tool_lop_234 : "Spindle sync (Mill-Turn only)"
+s_tool_lop_235 : "Tailstock advance/retract (Mill-Turn only)"
+s_tool_lop_236 : "Turret park (Mill-Turn only)"
+s_tool_lop_237 : "Center operation(Mill-Turn only)"
+s_tool_lop_238 : "Steady rest operation(Mill-Turn only)"
+s_tool_lop_239 : "Steady rest point operation(Mill-Turn only)"    # Fin op de tournage	#tool_op_x = 171
 
-s_too_lop_416 : "ENGRAVING"  					# +77          
-s_too_lop_439 : "ART"                  
-s_too_lop_309 : "5AXMSURF"           
-s_too_lop_441 : "SWARF 5AX"            
-s_too_lop_442 : "MORPH 5AX"            
-s_too_lop_443 : "PARALLEL 5AX"        
-s_too_lop_444 : "ALONGCURVE 5AX"      
-s_too_lop_445 : "MESH 5AX"           
-s_too_lop_446 : "ROUGHING 5AX"         
-s_too_lop_447 : "PROJECT 5AX"          
-s_too_lop_448 : "CONVERT 5AX"          
-s_too_lop_449 : "PORT EXPERT"          
-s_too_lop_450 : "BLADE EXPERT"         
-s_too_lop_451 : "ROTARY ADV"           
-s_too_lop_459 : "DEBURR"               
-s_too_lop_460 : "EBAUCHE 3+2 AUTOM."  
-s_too_lop_461 : "UNIFIE"               
+s_tool_lop_309 : "5AXMSURF"				#tool_op_x = 172			   
 
-s_too_lop : ""
-fstrsel s_too_lop_0 tool_op$ s_too_lop 147 -1
+s_tool_lop_416 : "ENGRAVING"			#tool_op_x = 173
+  					     
+s_tool_lop_439 : "ART" 					#tool_op_x = 174
+s_tool_lop_440 : ""                           
+s_tool_lop_441 : "SWARF 5AX"            
+s_tool_lop_442 : "MORPH 5AX"            
+s_tool_lop_443 : "PARALLEL 5AX"        
+s_tool_lop_444 : "ALONGCURVE 5AX"      
+s_tool_lop_445 : "MESH 5AX"           
+s_tool_lop_446 : "ROUGHING 5AX"         
+s_tool_lop_447 : "PROJECT 5AX"          
+s_tool_lop_448 : "CONVERT 5AX"          
+s_tool_lop_449 : "PORT EXPERT"          
+s_tool_lop_450 : "BLADE EXPERT"         
+s_tool_lop_451 : "ROTARY ADV" 			#tool_op_x = 186
+# OK         
+s_tool_lop_459 : "EBAVURAGE 5 AXES"		#tool_op_x = 187             
+s_tool_lop_460 : "EBAUCHE 3+2 AUTOM."  
+s_tool_lop_461 : "UNIFIE"               
+
+s_tool_lop : ""
+fstrsel s_tool_lop_0 tool_op_x s_tool_lop 190 -1  #170 -1
 #endregion
 
 #region infos_outils_liste
@@ -6900,8 +7065,14 @@ pwrtt$      # Liste d'outils & infos (--> lecture avant traitement parcours)
     strtool$ = ucase(strtool$)
     # vErification des rotations avant le traitement ISO
     if m9$ <> 1, rotation_axe = 1               # Inclinaison des axes
-    if nextop$ = 11, rotation_axe = 1           # useaxe = 1    #si pas de lecture def armoire en OP 5 axes seule
-    if m1$ = 1 & m5$ <> 1, rotation_A = 1       # incliné en Y uniquement (et Z) = ROTATION SUR L'AXE X
+    if nextop$ = 11 | rotaxis$ <> 0, 
+		[
+		rotation_axe = 1           				# useaxe = 1    #si pas de lecture def armoire en OP 5 axes seule
+    	# si on démarre avec une OP 5 axes ou en substitution
+		if srot_label = "A", rotation_A = 1
+		if srot_label = "B", rotation_B = 1 
+		]
+	if m1$ = 1 & m5$ <> 1, rotation_A = 1       # incliné en Y uniquement (et Z) = ROTATION SUR L'AXE X
     if m1$ <> 1 & m5$ = 1, rotation_B = 1       # incliné en X uniquement (et Z) = ROTATION SUR L'AXE Y
     if m1$ <> 1 & m5$ <> 1, rotation_axe = 2    # Erreur de plan
     if ra_type$ = 1 & ra_block$ >0, renvoi_d_angle = 1
@@ -7280,8 +7451,7 @@ preadbuf5   # Read Buffer 1
         ]
 #endregion
 
-#region Mastercam_Probe
-
+#region Mastercam_Probing
 # --------------------------------------------------------------------------
 # Mastercam Probing
 # --------------------------------------------------------------------------
@@ -8038,7 +8208,9 @@ probing_modify
 				<text>""</text>
 			</retract_amount>
 			<shift>
-				<text>""</text>
+				<text>Taraudage Rigide = 0 Flotant = 1</text>
+				<inch_value>0</inch_value>
+				<metric_value>0</metric_value>
 			</shift>
 		</tap>
 		<bore1>
@@ -9221,7 +9393,9 @@ probing_modify
 				<text>""</text>
 			</retract_amount>
 			<shift>
-				<text>""</text>
+				<text>Taraudage Rigide = 0 Flotant = 1</text>
+				<inch_value>0</inch_value>
+				<metric_value>0</metric_value>
 			</shift>
 		</tap>
 		<bore1>
